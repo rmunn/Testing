@@ -1,5 +1,2 @@
 Creating a file.
-Adding a line
-Another line
-Yet another change.
-And another one.
+Change made in branch.
