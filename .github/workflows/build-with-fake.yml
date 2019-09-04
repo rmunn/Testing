@@ -20,4 +20,4 @@ jobs:
     - name: Build with FAKE
       run: .fake/fake build
       env:
-        DOTNET_ROOT: /opt/hostedtoolcache/dncs
+        DOTNET_ROOT: /opt/hostedtoolcache/dncs/2.2.401/x64
