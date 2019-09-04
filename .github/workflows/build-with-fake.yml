@@ -15,9 +15,8 @@ jobs:
         dotnet-version: 2.2.401
     - name: Set up FAKE build tool
       run: dotnet tool install --tool-path .fake fake-cli
-    - name: Investigate dotnet installation
-      run: ls -lR /opt/hostedtoolcache/dncs
     - name: Build with FAKE
       run: .fake/fake build
       env:
+        # Work around https://github.com/actions/setup-dotnet/issues/29
         DOTNET_ROOT: /opt/hostedtoolcache/dncs/2.2.401/x64
