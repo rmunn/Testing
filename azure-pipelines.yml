@@ -1,19 +1,21 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Simple pipeline that should have the same results as .github/workflows/build-with-fake.yml
 
 trigger:
 - master
+# Also trigger on this branch while we're testing our script
+- azure-pipelines
 
 pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: UseDotNet@2
+  displayName: 'Setup .NET Core'
+  inputs:
+    packageType: sdk
+    version: 2.2.401
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+- name: Set up FAKE build tool
+  script: dotnet tool install --tool-path .fake fake-cli
+- name: Build with FAKE
+  script: .fake/fake build
