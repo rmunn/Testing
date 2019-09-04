@@ -15,7 +15,7 @@ steps:
     packageType: sdk
     version: 2.2.401
     installationPath: $(Agent.ToolsDirectory)/dotnet
-- name: Set up FAKE build tool
-  script: dotnet tool install --tool-path .fake fake-cli
-- name: Build with FAKE
-  script: .fake/fake build
+- script: dotnet tool install --tool-path .fake fake-cli
+  displayName: Set up FAKE build tool
+- script: .fake/fake build
+  displayName: Build with FAKE
