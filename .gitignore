@@ -1,1 +1,4 @@
 scratch/
+.fake/
+.ionide/
+build.fsx.lock

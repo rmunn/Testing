@@ -1,0 +1,22 @@
+name: Build master
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 2.2.401
+    - name: Set up FAKE build tool
+      run: dotnet tool install --tool-path .fake fake-cli
+    - name: Build with FAKE
+      run: .fake/fake build
+      env:
+        # Work around https://github.com/actions/setup-dotnet/issues/29
+        DOTNET_ROOT: /opt/hostedtoolcache/dncs/2.2.401/x64
