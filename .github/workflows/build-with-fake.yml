@@ -18,8 +18,15 @@ jobs:
         dotnet-version: 2.2.401
     - name: Set up FAKE build tool
       run: dotnet tool install --tool-path .fake fake-cli
-    - name: Build with FAKE
+    - name: Build with FAKE (Linux/OSX)
+      if: runner.os != 'Windows'
       run: .fake/fake build
+      env:
+        # Work around https://github.com/actions/setup-dotnet/issues/29
+        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/2.2.401/x64
+    - name: Build with FAKE (Windows)
+      if: runner.os == 'Windows'
+      run: .fake\fake build
       env:
         # Work around https://github.com/actions/setup-dotnet/issues/29
         DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/2.2.401/x64
