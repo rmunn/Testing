@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        dotnet: [2.2.401, 3.0.100-preview9]
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -15,7 +16,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 2.2.401
+        dotnet-version: ${{ matrix.dotnet }}
     - name: Set up FAKE build tool
       run: dotnet tool install --tool-path .fake fake-cli
     - name: Build with FAKE (Linux/OSX)
@@ -23,10 +24,10 @@ jobs:
       run: .fake/fake build
       env:
         # Work around https://github.com/actions/setup-dotnet/issues/29
-        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/2.2.401/x64
+        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
     - name: Build with FAKE (Windows)
       if: runner.os == 'Windows'
       run: .fake\fake build
       env:
         # Work around https://github.com/actions/setup-dotnet/issues/29
-        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/2.2.401/x64
+        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
