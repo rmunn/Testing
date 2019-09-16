@@ -16,14 +16,14 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 2.2.401
-    - name: Show dotnet installation path
-      run: echo $DOTNET_ROOT
-    - name: Investigate dotnet installation
-      run: ls -lR $DOTNET_ROOT
-    # - name: Set up FAKE build tool
-    #   run: dotnet tool install --tool-path .fake fake-cli
-    # - name: Build with FAKE
-    #   run: .fake/fake build
-    #   env:
-    #     # Work around https://github.com/actions/setup-dotnet/issues/29
-    #     DOTNET_ROOT: /opt/hostedtoolcache/dncs/2.2.401/x64
+    # - name: Show dotnet installation path
+    #   run: echo $DOTNET_ROOT
+    # - name: Investigate dotnet installation
+    #   run: ls -lR $DOTNET_ROOT
+    - name: Set up FAKE build tool
+      run: dotnet tool install --tool-path .fake fake-cli
+    - name: Build with FAKE
+      run: .fake/fake build
+      env:
+        # Work around https://github.com/actions/setup-dotnet/issues/29
+        DOTNET_ROOT: $DOTNET_ROOT/2.2.401/x64
