@@ -12,6 +12,10 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 2.2.401
     - name: Set up FAKE build tool
       run: dotnet tool install --tool-path .fake fake-cli
     - name: Build with FAKE (Linux/OSX)
