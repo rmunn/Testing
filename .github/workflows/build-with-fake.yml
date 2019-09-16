@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+      uses: rojepp/setup-dotnet@fix_dotnet_root
       with:
         dotnet-version: ${{ matrix.dotnet }}
     - name: Set up FAKE build tool
@@ -22,12 +22,8 @@ jobs:
     - name: Build with FAKE (Linux/OSX)
       if: runner.os != 'Windows'
       run: .fake/fake build
-      env:
-        # Work around https://github.com/actions/setup-dotnet/issues/29
-        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
+
     - name: Build with FAKE (Windows)
       if: runner.os == 'Windows'
       run: .fake\fake build
-      env:
-        # Work around https://github.com/actions/setup-dotnet/issues/29
-        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
+
