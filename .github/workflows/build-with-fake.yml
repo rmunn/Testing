@@ -17,17 +17,13 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ matrix.dotnet }}
+    # setup-dotnet action doesn't add the global tools dir to the PATH, so we must do it ourselves
+    - name: Add dotnet tools dir to PATH
+      run: echo ::add-path::$HOME/.dotnet/tools
     - name: Set up FAKE build tool
-      run: dotnet tool install --tool-path .fake fake-cli
-    - name: Build with FAKE (Linux/OSX)
-      if: runner.os != 'Windows'
-      run: .fake/fake build
-      env:
-        # Work around https://github.com/actions/setup-dotnet/issues/29
-        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
-    - name: Build with FAKE (Windows)
-      if: runner.os == 'Windows'
-      run: .fake\fake build
+      run: dotnet tool install -g fake-cli
+    - name: Build with FAKE
+      run: fake build
       env:
         # Work around https://github.com/actions/setup-dotnet/issues/29
         DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
