@@ -17,11 +17,15 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ matrix.dotnet }}
+      env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     # setup-dotnet action doesn't add the global tools dir to the PATH, so we must do it ourselves
     - name: Add dotnet tools dir to PATH
       run: echo ::add-path::$HOME/.dotnet/tools
     - name: Set up FAKE build tool
       run: dotnet tool install -g fake-cli
+      env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     - name: Echo triggering event for more info (skipped on Windows)
       run: cat $GITHUB_EVENT_PATH
       if: runner.os != 'Windows'
@@ -58,5 +62,6 @@ jobs:
     - name: Build with FAKE
       run: fake build
       env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
         # Work around https://github.com/actions/setup-dotnet/issues/29
         DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
