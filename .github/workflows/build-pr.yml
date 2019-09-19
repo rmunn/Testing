@@ -1,0 +1,62 @@
+name: Build PR
+
+on: [pull_request]
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        dotnet: [2.2.402, 3.0.100-rc1-014190]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ matrix.dotnet }}
+    # setup-dotnet action doesn't add the global tools dir to the PATH, so we must do it ourselves
+    - name: Add dotnet tools dir to PATH
+      run: echo ::add-path::$HOME/.dotnet/tools
+    - name: Set up FAKE build tool
+      run: dotnet tool install -g fake-cli
+    - name: Echo triggering event for more info (skipped on Windows)
+      run: cat $GITHUB_EVENT_PATH
+      if: runner.os != 'Windows'
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Dump job context
+      env:
+        JOB_CONTEXT: ${{ toJson(job) }}
+      run: echo "$JOB_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Dump steps context
+      env:
+        STEPS_CONTEXT: ${{ toJson(steps) }}
+      run: echo "$STEPS_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Dump runner context
+      env:
+        RUNNER_CONTEXT: ${{ toJson(runner) }}
+      run: echo "$RUNNER_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Dump strategy context
+      env:
+        STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+      run: echo "$STRATEGY_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Dump matrix context
+      env:
+        MATRIX_CONTEXT: ${{ toJson(matrix) }}
+      run: echo "$MATRIX_CONTEXT"
+      if: runner.os != 'Windows'
+    - name: Build with FAKE
+      run: fake build
+      env:
+        # Work around https://github.com/actions/setup-dotnet/issues/29
+        DOTNET_ROOT: ${{ runner.tool_cache }}/dncs/${{ matrix.dotnet }}/x64
