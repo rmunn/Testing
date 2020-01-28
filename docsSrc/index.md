@@ -4,11 +4,11 @@
 
 ## What is Testing?
 
-Testing is a library that does this specific thing.  
+Testing is a repo for learning various deployment tools.
 
 ## Why use Testing?
 
-I created it because I had to solve an issue with this other thing.
+I created it so I could experiment without messing up the history of my main repo.
 
 ---
 
