@@ -446,13 +446,13 @@ let sourceLinkTest _ =
 
 let publishToNuget _ =
     isReleaseBranchCheck ()
-    Paket.push(fun c ->
-        { c with
-            ToolType = ToolType.CreateLocalTool()
-            PublishUrl = publishUrl
-            WorkingDir = "dist"
-        }
-    )
+    // Paket.push(fun c ->
+    //     { c with
+    //         ToolType = ToolType.CreateLocalTool()
+    //         PublishUrl = publishUrl
+    //         WorkingDir = "dist"
+    //     }
+    // )
 
 let gitRelease _ =
     isReleaseBranchCheck ()

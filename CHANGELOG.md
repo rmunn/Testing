@@ -15,6 +15,7 @@ Switch to [MiniScaffold](https://github.com/TheAngryByrd/MiniScaffold) for proje
 ### Removed
 - Extra output in workflow logs
 - Miscellaneous test files from years ago
+- Pushing to NuGet in build script since this is a test repo
 
 ## [0.0.2] - 2019-10-01
 
