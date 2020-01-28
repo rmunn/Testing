@@ -475,7 +475,6 @@ let gitRelease _ =
 
     Git.Branches.tag "" tag
     Git.Branches.pushTag "" "origin" tag
-    Async.Sleep 5000 |> Async.RunSynchronously
 
 let githubRelease _ =
     let token =
