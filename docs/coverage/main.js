@@ -225,7 +225,7 @@ var assemblies = [
     "name": "Testing",
     "classes": [
       { "name": "System.AssemblyVersionInformation", "rp": "Testing_AssemblyVersionInformation.htm", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "ct": "MethodCoverage", "mc": "-", "cb": 0, "tb": 0, "lch": [], "bch": [], "hc": [] },
-      { "name": "Testing.Say", "rp": "Testing_Say.htm", "cl": 4, "ucl": 0, "cal": 4, "tl": 58, "ct": "LineCoverage", "mc": "-", "cb": 0, "tb": 0, "lch": [], "bch": [], "hc": [] },
+      { "name": "Testing.Say", "rp": "Testing_Say.htm", "cl": 3, "ucl": 1, "cal": 4, "tl": 58, "ct": "LineCoverage", "mc": "-", "cb": 0, "tb": 0, "lch": [], "bch": [], "hc": [] },
     ]},
 ];
 
