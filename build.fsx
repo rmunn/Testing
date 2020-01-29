@@ -266,6 +266,21 @@ let clean _ =
     ]
     |> Seq.iter Shell.rm
 
+let dotnetRestore _ =
+    [sln]
+    |> Seq.map(fun dir -> fun () ->
+        let args =
+            [
+            ] |> String.concat " "
+        DotNet.restore(fun c ->
+            { c with
+                Common =
+                    c.Common
+                    |> DotNet.Options.withCustomParams
+                        (Some(args))
+            }) dir)
+    |> Seq.iter(retryIfInCI 10)
+
 let updateChangelog ctx =
     let description, unreleasedChanges =
         match changelog.Unreleased with
@@ -273,14 +288,18 @@ let updateChangelog ctx =
         | Some u -> u.Description, u.Changes
     let verStr = ctx |> getVersionNumber "RELEASE_VERSION"
     let newVersion = SemVer.parse verStr
-    if changelog.Entries |> List.exists (fun entry -> entry.SemVer = newVersion) then
-        let entry = changelog.Entries |> List.find (fun entry -> entry.SemVer = newVersion)
+    changelog.Entries
+    |> List.tryFind (fun entry -> entry.SemVer = newVersion)
+    |> Option.iter (fun entry ->
         Trace.traceErrorfn "Version %s already exists in %s, released on %s" verStr changelogFilename (if entry.Date.IsSome then entry.Date.Value.ToString("yyyy-MM-dd") else "(no date specified)")
         failwith "Can't release with a duplicate version number"
-    if changelog.Entries |> List.exists (fun entry -> entry.SemVer > newVersion) then
-        let entry = changelog.Entries |> List.find (fun entry -> entry.SemVer > newVersion)
+    )
+    changelog.Entries
+    |> List.tryFind (fun entry -> entry.SemVer > newVersion)
+    |> Option.iter (fun entry ->
         Trace.traceErrorfn "You're trying to release version %s, but a later version %s already exists, released on %s" verStr entry.SemVer.AsString (if entry.Date.IsSome then entry.Date.Value.ToString("yyyy-MM-dd") else "(no date specified)")
         failwith "Can't release with a version number older than an existing release"
+    )
     let versionTuple version = (version.Major, version.Minor, version.Patch)
     let prereleaseEntries = changelog.Entries |> List.filter (fun entry -> entry.SemVer.PreRelease.IsSome && versionTuple entry.SemVer = versionTuple newVersion)
     let prereleaseChanges = prereleaseEntries |> List.collect (fun entry -> entry.Changes |> List.filter (not << isEmptyChange))
@@ -293,23 +312,11 @@ let updateChangelog ctx =
     |> Changelog.save changelogFilename
     // Changelog.save doesn't write a final newline, so we add one when writing out the new link reference
     sprintf "\n%s\n" linkReferenceForLatestEntry |> File.writeString true changelogFilename
+    // If build fails after this point but before a Git commit happens, undo our modifications
+    Target.activateBuildFailure "RevertChangelog"
 
-let dotnetRestore _ =
-    [sln]
-    |> Seq.map(fun dir -> fun () ->
-        let args =
-            [
-                sprintf "/p:PackageVersion=%s" latestEntry.NuGetVersion
-            ] |> String.concat " "
-        DotNet.restore(fun c ->
-            { c with
-                Common =
-                    c.Common
-                    |> DotNet.Options.withCustomParams
-                        (Some(args))
-            }) dir)
-    |> Seq.iter(retryIfInCI 10)
-
+let revertChangelog _ =
+    Git.Reset.hard "" "HEAD" changelogFilename
 
 let dotnetBuild ctx =
     let args =
@@ -545,8 +552,9 @@ let releaseDocs ctx =
 //-----------------------------------------------------------------------------
 
 Target.create "Clean" clean
-Target.create "UpdateChangelog" updateChangelog
 Target.create "DotnetRestore" dotnetRestore
+Target.create "UpdateChangelog" updateChangelog
+Target.create "RevertChangelog" revertChangelog  // Runs on build failure; do NOT put this in the dependency chain
 Target.create "DotnetBuild" dotnetBuild
 Target.create "DotnetTest" dotnetTest
 Target.create "GenerateCoverageReport" generateCoverageReport
@@ -573,16 +581,17 @@ Target.create "ReleaseDocs" releaseDocs
 "Clean" ?=> "DotnetRestore"
 "Clean" ==> "DotnetPack"
 
-// Only call UpdateChangelog if Publish was in the call chain
-// Ensure UpdateChangelog is called before DotnetRestore
-"UpdateChangelog" ?=> "DotnetRestore"
-"UpdateChangelog" ==> "PublishToNuGet"
-
 // Only call AssemblyInfo if Publish was in the call chain
 // Ensure AssemblyInfo is called after DotnetRestore and before DotnetBuild
 "DotnetRestore" ?=> "GenerateAssemblyInfo"
 "GenerateAssemblyInfo" ?=> "DotnetBuild"
 "GenerateAssemblyInfo" ==> "PublishToNuGet"
+
+// Only call UpdateChangelog if Publish was in the call chain
+// Ensure UpdateChangelog is called after DotnetRestore and before AssemblyInfo
+"DotnetRestore" ?=> "UpdateChangelog"
+"UpdateChangelog" ?=> "AssemblyInfo"
+"UpdateChangelog" ==> "PublishToNuGet"
 
 "DotnetBuild" ==> "BuildDocs"
 "BuildDocs" ==> "ReleaseDocs"
