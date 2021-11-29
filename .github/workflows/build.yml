@@ -132,8 +132,6 @@ jobs:
       env:
         MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
       run: |
-        git config user.name 'Github Actions'
-        git config user.email 'actions@github.com'
         git tag -a -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
         git push --tags
 
