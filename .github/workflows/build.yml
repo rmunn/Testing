@@ -94,6 +94,20 @@ jobs:
         echo "::set-output name=AssemblySemFileVer::${AssemblySemFileVer}"
         echo "::set-output name=InformationalVersion::${InformationalVersion}"
 
+    - name: Collect build output
+      env:
+        MajorMinorPatch: ${{ steps.versionnum.outputs.MajorMinorPatch }}
+      run: |
+        echo "# Version ${MajorMinorPatch}" > RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "Release notes for ${MajorMinorPatch} go here" >> RELEASE_NOTES.md
+
+    - name: Upload release notes
+      uses: actions/upload-artifact@v2
+      with:
+        name: release-notes
+        path: RELEASE_NOTES.md
+
     outputs:
       DebPackageVersion: ${{ steps.versionnum.outputs.DebPackageVersion }}
       MajorMinorPatch: ${{ steps.versionnum.outputs.MajorMinorPatch }}
@@ -103,8 +117,24 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/heads/master')
     steps:
-      - name: Get output
-        env:
-          DebPackageVersion: ${{needs.build.outputs.DebPackageVersion}}
-          MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
-        run: echo "Will build ${MajorMinorPatch}"
+    - name: Get output
+      env:
+        DebPackageVersion: ${{needs.build.outputs.DebPackageVersion}}
+        MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
+      run: echo "Will build ${MajorMinorPatch}"
+
+    - name: Tag new release
+      env:
+        MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
+      run: echo git tag -s -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
+
+    - name: Download release notes
+      uses: actions/download-artifact@v2
+      with:
+        name: release-notes
+        path: RELEASE_NOTES.md
+
+    - name: Create GitHub release
+      env:
+        MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
+      run: echo "Release notes for v${MajorMinorPatch} follow:\n$(cat RELEASE_NOTES.md)"
