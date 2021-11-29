@@ -105,5 +105,6 @@ jobs:
     steps:
       - name: Get output
         env:
-          OUTPUT: ${{JSON.stringify(needs.build.outputs)}}
-        run: echo "Earlier output was ${OUTPUT}"
+          DebPackageVersion: ${{needs.build.outputs.DebPackageVersion}}
+          MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
+        run: echo "Will build ${MajorMinorPatch}"
