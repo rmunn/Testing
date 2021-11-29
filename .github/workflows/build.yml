@@ -131,7 +131,10 @@ jobs:
     - name: Tag new release
       env:
         MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
-      run: git tag -s -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
+      run: |
+        git config user.name 'Github Actions'
+        git config user.email 'actions@github.com'
+        git tag -a -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
 
     - name: Download release notes
       uses: actions/download-artifact@v2
