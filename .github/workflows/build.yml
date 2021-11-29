@@ -135,6 +135,7 @@ jobs:
         git config user.name 'Github Actions'
         git config user.email 'actions@github.com'
         git tag -a -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
+        git push
 
     - name: Download release notes
       uses: actions/download-artifact@v2
