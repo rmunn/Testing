@@ -101,12 +101,15 @@ jobs:
         echo "# Version ${MajorMinorPatch}" > RELEASE_NOTES.md
         echo "" >> RELEASE_NOTES.md
         echo "Release notes for ${MajorMinorPatch} go here" >> RELEASE_NOTES.md
+        echo "Build artifacts go here" > build_artifacts.txt
 
     - name: Upload release notes
       uses: actions/upload-artifact@v2
       with:
         name: release-notes
-        path: RELEASE_NOTES.md
+        path: |
+          RELEASE_NOTES.md
+          build_artifacts.txt
 
     outputs:
       DebPackageVersion: ${{ steps.versionnum.outputs.DebPackageVersion }}
@@ -115,8 +118,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: build
-    if: startsWith(github.ref, 'refs/heads/master')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/master')  # Would be refs/heads/live in real repo
     steps:
+    - uses: actions/checkout@v1
+
     - name: Get output
       env:
         DebPackageVersion: ${{needs.build.outputs.DebPackageVersion}}
@@ -126,15 +131,22 @@ jobs:
     - name: Tag new release
       env:
         MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
-      run: echo git tag -s -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
+      run: git tag -s -m "Release v${MajorMinorPatch}" "v${MajorMinorPatch}"
 
     - name: Download release notes
       uses: actions/download-artifact@v2
       with:
         name: release-notes
-        path: RELEASE_NOTES.md
+        path: |
+          RELEASE_NOTES.md
+          build_artifacts.txt
 
     - name: Create GitHub release
       env:
         MajorMinorPatch: ${{needs.build.outputs.MajorMinorPatch}}
-      run: echo "Release notes for v${MajorMinorPatch} follow:\n$(cat RELEASE_NOTES.md)"
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{needs.build.outputs.MajorMinorPatch}}
+        files: build_artifacts.txt
+        body_path: RELEASE_NOTES.md
+        prerelease: ${{ github.ref == 'qa' || github.ref == 'old-qa' }}
