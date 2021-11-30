@@ -154,5 +154,5 @@ jobs:
       with:
         tag_name: v${{needs.build.outputs.MajorMinorPatch}}
         files: release/*.txt
-        body_path: release/RELEASE_NOTES.md
+        generate_release_notes: true
         prerelease: ${{ github.ref == 'qa' || github.ref == 'old-qa' }}
