@@ -154,5 +154,8 @@ jobs:
       with:
         tag_name: v${{needs.build.outputs.MajorMinorPatch}}
         files: release/*.txt
-        generate_release_notes: true
+        body: |
+          Release of Testing repo v${{needs.build.outputs.MajorMinorPatch}}
+
+          Instructions for installing it would go here
         prerelease: ${{ github.ref == 'qa' || github.ref == 'old-qa' }}
