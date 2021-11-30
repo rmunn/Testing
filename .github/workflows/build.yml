@@ -145,7 +145,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: release-notes
-        path: .
+        path: release/
 
     - name: Create GitHub release
       env:
@@ -153,6 +153,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{needs.build.outputs.MajorMinorPatch}}
-        files: build_artifacts.txt
-        body_path: RELEASE_NOTES.md
+        files: release/*.txt
+        body_path: release/RELEASE_NOTES.md
         prerelease: ${{ github.ref == 'qa' || github.ref == 'old-qa' }}
