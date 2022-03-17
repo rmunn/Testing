@@ -157,7 +157,7 @@ jobs:
 
       - name: Save current version number to an output
         id: output_version_number
-        run: echo "::set-output name=TagForThisJob::${TAG}"
+        run: echo "::set-output name=TagFor${{matrix.dbversion}}::${TAG}"
         env:
           TAG: v${{ steps.version.outputs.MsBuildVersion }}
 
@@ -208,7 +208,10 @@ jobs:
     outputs:
       MajorMinorPatch: ${{ steps.version.outputs.MajorMinorPatch }}
       MsBuildVersion: ${{ steps.version.outputs.MsBuildVersion }}
-      TagFor${{matrix.dbversion}}: ${{ steps.output_version_number.outputs.TagForThisJob }}
+      TagFor7000068: ${{ steps.output_version_number.outputs.TagFor7000068 }}
+      TagFor7000069: ${{ steps.output_version_number.outputs.TagFor7000069 }}
+      TagFor7000070: ${{ steps.output_version_number.outputs.TagFor7000070 }}
+      TagFor7000072: ${{ steps.output_version_number.outputs.TagFor7000072 }}
 
   release:
     runs-on: ubuntu-latest
