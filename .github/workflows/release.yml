@@ -56,7 +56,6 @@ jobs:
         FW9Branch: ${{ inputs.FW9Branch }}
         TAG70: ${{ inputs.TagFor7000070 }}
         TAG72: ${{ inputs.TagFor7000072 }}
-        TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
