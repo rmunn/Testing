@@ -2,3 +2,4 @@ Here is a new feature
 It was changed in the old-master branch
 More and more work on the feature
 More work after the v1.2.2 tag
+More work after the v1.2.3 tag
