@@ -212,9 +212,11 @@ jobs:
       TagFor7000069: ${{ steps.output_version_number.outputs.TagFor7000069 }}
       TagFor7000070: ${{ steps.output_version_number.outputs.TagFor7000070 }}
       TagFor7000072: ${{ steps.output_version_number.outputs.TagFor7000072 }}
+      FW8Branch: ${{ needs.calculate_branches.outputs.FW8Branch }}
+      FW9Branch: ${{ needs.calculate_branches.outputs.FW9Branch }}
 
   release:
-    needs: [calculate_branches, build]
+    needs: [build]
     uses: ./.github/workflows/release.yml
     with:
       MajorMinorPatch: ${{ needs.build.outputs.MajorMinorPatch }}
@@ -223,3 +225,5 @@ jobs:
       TagFor7000069: ${{ needs.build.outputs.TagFor7000069 }}
       TagFor7000070: ${{ needs.build.outputs.TagFor7000070 }}
       TagFor7000072: ${{ needs.build.outputs.TagFor7000072 }}
+      FW8Branch: ${{ needs.build.outputs.FW8Branch }}
+      FW9Branch: ${{ needs.build.outputs.FW9Branch }}
