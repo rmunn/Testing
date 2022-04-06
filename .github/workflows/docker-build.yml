@@ -219,7 +219,6 @@ jobs:
     needs: [build]
     uses: ./.github/workflows/release.yml
     with:
-      MajorMinorPatch: ${{ needs.build.outputs.MajorMinorPatch }}
       MsBuildVersion: ${{ needs.build.outputs.MsBuildVersion }}
       TagFor7000068: ${{ needs.build.outputs.TagFor7000068 }}
       TagFor7000069: ${{ needs.build.outputs.TagFor7000069 }}
