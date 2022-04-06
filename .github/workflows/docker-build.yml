@@ -205,13 +205,22 @@ jobs:
       #   with:
       #     name: lfmerge-tarball
       #     path: tarball
+    outputs:
+      MajorMinorPatch: ${{ steps.version.outputs.MajorMinorPatch }}
+      MsBuildVersion: ${{ steps.version.outputs.MsBuildVersion }}
+      TagFor7000068: ${{ steps.output_version_number.outputs.TagFor7000068 }}
+      TagFor7000069: ${{ steps.output_version_number.outputs.TagFor7000069 }}
+      TagFor7000070: ${{ steps.output_version_number.outputs.TagFor7000070 }}
+      TagFor7000072: ${{ steps.output_version_number.outputs.TagFor7000072 }}
 
-      - name: Call release workflow
-        uses: ./.github/workflows/release.yml
-        with:
-          MajorMinorPatch: ${{ steps.version.outputs.MajorMinorPatch }}
-          MsBuildVersion: ${{ steps.version.outputs.MsBuildVersion }}
-          TagFor7000068: ${{ steps.output_version_number.outputs.TagFor7000068 }}
-          TagFor7000069: ${{ steps.output_version_number.outputs.TagFor7000069 }}
-          TagFor7000070: ${{ steps.output_version_number.outputs.TagFor7000070 }}
-          TagFor7000072: ${{ steps.output_version_number.outputs.TagFor7000072 }}
+  release:
+    runs-on: ubuntu-latest
+    needs: [calculate_branches, build]
+    uses: ./.github/workflows/release.yml
+    with:
+      MajorMinorPatch: ${{ needs.build.outputs.MajorMinorPatch }}
+      MsBuildVersion: ${{ needs.build.outputs.MsBuildVersion }}
+      TagFor7000068: ${{ needs.build.outputs.TagFor7000068 }}
+      TagFor7000069: ${{ needs.build.outputs.TagFor7000069 }}
+      TagFor7000070: ${{ needs.build.outputs.TagFor7000070 }}
+      TagFor7000072: ${{ needs.build.outputs.TagFor7000072 }}
