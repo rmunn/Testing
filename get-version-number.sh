@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo Start
+echo "GitHub ref, if any, was (${GITHUB_REF}) and ref name was (${GITHUB_REF_NAME}) - base ref was (${GITHUB_BASE_REF}) and head ref was (${GITHUB_HEAD_REF})"
 REV=${GITHUB_REF:-$(git rev-parse --symbolic-full-name HEAD)}
 DESCRIBE=$(git describe --long --match "v*")
 MAJOR=$(echo "$DESCRIBE" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/\1/')
