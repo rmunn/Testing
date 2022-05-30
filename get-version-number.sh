@@ -20,14 +20,6 @@ echo "Build number after: $BUILD_NUMBER"
 export MajorMinorPatch="${MAJOR}.${MINOR}.${PATCH}"
 export AssemblySemVer="${MajorMinorPatch}.${BUILD_NUMBER}"
 export AssemblySemFileVer="${MajorMinorPatch}.0"
-if [ -n "${DbVersion}" ]; then
-  INFO_SUFFIX="-${DbVersion}"
-else
-  INFO_SUFFIX=""
-fi
-GIT_SHA=${GITHUB_SHA:-$(git rev-parse ${REV})}
-TAG_SUFFIX="$(date +%Y%m%d)-${GIT_SHA}"
-export InformationalVersion="LfMerge${INFO_SUFFIX}:${TAG_SUFFIX}"
 echo "Calculating name from ${REV}"
 if [ -z ${REV} ]; then
   echo Failed to get a meaningful commit name
@@ -79,6 +71,14 @@ case "$REV" in
 esac
 export DebPackageVersion=${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}
 export MsBuildVersion=$(echo "${DebPackageVersion}" | sed 's/~/-/')
+if [ -n "${DbVersion}" ]; then
+  INFO_SUFFIX=".${DbVersion}"
+else
+  INFO_SUFFIX=""
+fi
+GIT_SHA=${GITHUB_SHA:-$(git rev-parse ${REV})}
+TAG_SUFFIX="$(date +%Y%m%d)-${GIT_SHA}"
+export InformationalVersion="${MsBuildVersion}${INFO_SUFFIX}:${TAG_SUFFIX}"
 echo "Will build package version ${DebPackageVersion}"
 echo "name=DebPackageVersion::${DebPackageVersion}"
 echo "name=MsBuildVersion::${MsBuildVersion}"
