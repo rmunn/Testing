@@ -2,9 +2,9 @@ name: docker-build
 
 on:
   push:
-    branches: [ master, qa, live, old-master, old-qa, old-live ]
+    branches: [ master, qa, live, fieldworks8-master, fieldworks8-qa, fieldworks8-live ]
   pull_request:
-    branches: [ master, old-master ]
+    branches: [ master, fieldworks8-master ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -112,15 +112,15 @@ jobs:
           echo Will calculate version from "${RESULT}" and "${MAJOR}.${MINOR}.${PATCH} with $COMMIT_COUNT commits since then, and current hash $COMMIT_HASH"
 
           case "$REV" in
-            refs/heads/master | refs/heads/old-master)
+            refs/heads/master | refs/heads/fieldworks8-master)
               PRERELEASE="~alpha.${BUILD_NUMBER}"
               ;;
 
-            refs/heads/qa | refs/heads/old-qa)
+            refs/heads/qa | refs/heads/fieldworks8-qa)
               PRERELEASE="~beta.${BUILD_NUMBER}"
               ;;
 
-            refs/heads/live | refs/heads/old-live)
+            refs/heads/live | refs/heads/fieldworks8-live)
               PRERELEASE=
               ;;
 
