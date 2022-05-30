@@ -17,16 +17,16 @@ if [ "${IS_FW9}" ]; then
 	if [ "$1" ]; then
 		FW8_BUILD_BRANCH="$1"
 	elif [ "${CURRENT_BRANCH}" = "master" -o "${CURRENT_BRANCH}" = "qa" -o "${CURRENT_BRANCH}" = "live" ]; then
-		FW8_BUILD_BRANCH="old-${CURRENT_BRANCH}"
+		FW8_BUILD_BRANCH="fieldworks8-${CURRENT_BRANCH}"
 	else
-		FW8_BUILD_BRANCH="old-master"
+		FW8_BUILD_BRANCH="fieldworks8-master"
 	fi
 else
 	FW8_BUILD_BRANCH="${CURRENT_BRANCH}"
 	if [ "$1" ]; then
 		FW9_BUILD_BRANCH="$1"
-	elif [ "${CURRENT_BRANCH}" = "old-master" -o "${CURRENT_BRANCH}" = "old-qa" -o "${CURRENT_BRANCH}" = "old-live" ]; then
-		FW9_BUILD_BRANCH="${CURRENT_BRANCH##old-}"
+	elif [ "${CURRENT_BRANCH}" = "fieldworks8-master" -o "${CURRENT_BRANCH}" = "fieldworks8-qa" -o "${CURRENT_BRANCH}" = "fieldworks8-live" ]; then
+		FW9_BUILD_BRANCH="${CURRENT_BRANCH##fieldworks8-}"
 	else
 		FW9_BUILD_BRANCH="master"
 	fi
