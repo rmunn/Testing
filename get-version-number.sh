@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "GitHub ref, if any, was (${GITHUB_REF}) and ref name was (${GITHUB_REF_NAME}) - base ref was (${GITHUB_BASE_REF}) and head ref was (${GITHUB_HEAD_REF})"
-echo "Are we on a branch?"
+echo "DbVersion was (${DbVersion})"
 REV=${GITHUB_REF:-$(git rev-parse --symbolic-full-name HEAD)}
 DESCRIBE=$(git describe --long --match "v*")
 MAJOR=$(echo "$DESCRIBE" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/\1/')
@@ -20,7 +20,14 @@ echo "Build number after: $BUILD_NUMBER"
 export MajorMinorPatch="${MAJOR}.${MINOR}.${PATCH}"
 export AssemblySemVer="${MajorMinorPatch}.${BUILD_NUMBER}"
 export AssemblySemFileVer="${MajorMinorPatch}.0"
-export InformationalVersion="${DESCRIBE}"
+if [ -n "${DbVersion}" ]; then
+  INFO_SUFFIX="-${DbVersion}"
+else
+  INFO_SUFFIX=""
+fi
+GIT_SHA=${GITHUB_SHA:-$(git rev-parse ${REV})}
+TAG_SUFFIX="$(date +%Y%m%d)-${GIT_SHA}"
+export InformationalVersion="LfMerge${INFO_SUFFIX}:${TAG_SUFFIX}"
 echo "Calculating name from ${REV}"
 if [ -z ${REV} ]; then
   echo Failed to get a meaningful commit name
