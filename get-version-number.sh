@@ -72,9 +72,9 @@ esac
 export DebPackageVersion=${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}
 export MsBuildVersion=$(echo "${DebPackageVersion}" | sed 's/~/-/')
 echo "Will build package version ${DebPackageVersion}"
-echo "::set-output name=DebPackageVersion::${DebPackageVersion}"
-echo "::set-output name=MsBuildVersion::${MsBuildVersion}"
-echo "::set-output name=MajorMinorPatch::${MajorMinorPatch}"
-echo "::set-output name=AssemblySemVer::${AssemblySemVer}"
-echo "::set-output name=AssemblySemFileVer::${AssemblySemFileVer}"
-echo "::set-output name=InformationalVersion::${InformationalVersion}"
+echo "name=DebPackageVersion::${DebPackageVersion}"
+echo "name=MsBuildVersion::${MsBuildVersion}"
+echo "name=MajorMinorPatch::${MajorMinorPatch}"
+echo "name=AssemblySemVer::${AssemblySemVer}"
+echo "name=AssemblySemFileVer::${AssemblySemFileVer}"
+echo "name=InformationalVersion::${InformationalVersion}"
