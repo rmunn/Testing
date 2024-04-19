@@ -41,7 +41,7 @@ jobs:
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
         name: zstd-for-python-${{ matrix.python-version }}
-        path: linux-x64/Mercurial/contrib/python-zstandard/lib.linux-x86_64-cpython-*/zstd.cpython-*-x86_64-linux-gnu.so
+        path: linux-x64/Mercurial/contrib/python-zstandard/build/lib.linux-x86_64-cpython-*/zstd.cpython-*-x86_64-linux-gnu.so
         if-no-files-found: error
 
   build:
