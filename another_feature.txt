@@ -1,5 +1,0 @@
-Edited this feature
-This feature was improved in the new-master branch
-More work improving it some more
-Work done after the v2.2.0 tag
-Work done after the v2.2.1 tag
