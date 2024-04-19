@@ -37,6 +37,9 @@ jobs:
     - name: Build zstd module
       working-directory: linux-x64/Mercurial/contrib/python-zstandard
       run: python3 setup.py build
+    - name: Debug build location
+      working-directory: linux-x64/Mercurial/contrib/python-zstandard
+      run: ls -lR
     - name: Upload zstd module
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
