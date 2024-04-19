@@ -32,11 +32,13 @@ jobs:
       uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install Python build tool
+      run: pip install build
     - name: Checkout
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
     - name: Build zstd module
       working-directory: linux-x64/Mercurial/contrib/python-zstandard
-      run: python3 setup.py build
+      run: python3 -m build
     - name: Upload zstd module
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
