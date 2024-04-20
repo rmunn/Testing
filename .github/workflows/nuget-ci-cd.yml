@@ -40,18 +40,21 @@ jobs:
       run: hg clone https://repo.mercurial-scm.org/hg
     - name: Checkout hg version to build
       run: hg checkout 6.5.1
+      working-directory: hg
       # run: hg checkout $VER
       # env:
       #   VER: ${{ matrix.mercurial-version }}
     - name: Build Mercurial
       run: make local
+      working-directory: hg
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
+      working-directory: hg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
         name: hg-for-python-${{ matrix.python-version }}
-        path: .
+        path: hg
         if-no-files-found: error
 
   build:
