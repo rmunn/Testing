@@ -52,6 +52,9 @@ jobs:
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
       working-directory: hg
+    - name: ls -lR to check files about to upload
+      run: ls -lR
+      working-directory: hg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
