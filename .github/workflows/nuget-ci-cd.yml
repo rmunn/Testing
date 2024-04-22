@@ -94,9 +94,6 @@ jobs:
       working-directory: linux-x64
       run: ls -lR
 
-    - name: Restore executable bits
-      run: chmod +x linux-x64/Mercurial/hg
-
     - name: Nuget pack
       run: dotnet msbuild -target:Build build/SIL.Chorus.Mercurial.proj -property:PreRelease=${{ env.release-suffix }} -property:BuildCounter=${{ github.run_number }}
 
