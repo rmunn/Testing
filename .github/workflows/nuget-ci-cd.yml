@@ -52,9 +52,6 @@ jobs:
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
       working-directory: hg
-    - name: ls -lR to check files about to upload
-      run: ls -lR
-      working-directory: hg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
@@ -89,10 +86,6 @@ jobs:
         path: linux-x64/Mercurial
         pattern: hg-for-python-*
         merge-multiple: true
-
-    - name: Check downloaded Mercurial builds
-      working-directory: linux-x64
-      run: ls -lR
 
     - name: Nuget pack
       run: dotnet msbuild -target:Build build/SIL.Chorus.Mercurial.proj -property:PreRelease=${{ env.release-suffix }} -property:BuildCounter=${{ github.run_number }}
