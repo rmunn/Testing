@@ -6,10 +6,9 @@ name: Nuget-CI-CD
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ mercurial-zstd ]
-  #   branches: [ master ]
-  # pull_request:
-  #   branches: [ master ]
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 # Cancel any workflow jobs running if the PR is re-triggered
 concurrency:
