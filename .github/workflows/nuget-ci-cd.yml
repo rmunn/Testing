@@ -51,6 +51,8 @@ jobs:
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
       working-directory: hg
+    - name: Set executable bit on hg binary before upload
+      run: chmod +x hg/hg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
@@ -85,6 +87,9 @@ jobs:
         path: linux-x64/Mercurial
         pattern: hg-for-python-*
         merge-multiple: true
+
+    - name: See if executable bit was preserved
+      run: ls -l linux-x64/Mercurial/hg
 
     - name: Nuget pack
       run: dotnet msbuild -target:Build build/SIL.Chorus.Mercurial.proj -property:PreRelease=${{ env.release-suffix }} -property:BuildCounter=${{ github.run_number }}
