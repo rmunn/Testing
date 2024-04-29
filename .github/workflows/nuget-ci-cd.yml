@@ -35,6 +35,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+    - name: Check open file limit
+      run: ulimit -n
+    - name: Try setting file limit to 4096
+      run: ulimit -n 4096
+    - name: Check open file limit again
+      run: ulimit -n
     - name: Install Python setuptools
       run: pip install setuptools
     - name: Checkout Mercurial
