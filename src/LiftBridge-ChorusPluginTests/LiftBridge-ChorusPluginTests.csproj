@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LiftBridgeTests</RootNamespace>
+    <AssemblyName>LiftBridge-ChorusPluginTests</AssemblyName>
+    <Description>Unit tests for LiftBridge-ChorusPlugin</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3" PrivateAssets="all" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="SIL.Chorus.LibChorus.TestUtilities" Version="$(ChorusVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LiftBridge-ChorusPlugin\LiftBridge-ChorusPlugin.csproj" />
+    <ProjectReference Include="..\TriboroughBridge-ChorusPlugin\TriboroughBridge-ChorusPlugin.csproj" />
+  </ItemGroup>
+
+</Project>

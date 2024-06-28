@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>TriboroughBridge_ChorusPlugin</RootNamespace>
+    <AssemblyTitle>TriboroughBridge-ChorusPlugin</AssemblyTitle>
+    <PackageId>SIL.ChorusPlugin.TriboroughBridge</PackageId>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3" PrivateAssets="all" />
+    <PackageReference Include="SIL.Chorus.App" Version="$(ChorusVersion)" />
+    <PackageReference Include="SIL.Chorus.LibChorus" Version="$(ChorusVersion)" />
+    <PackageReference Include="SIL.FLExBridge.IPCFramework" Version="1.1.1-beta0001" />
+    <PackageReference Include="SIL.ReleaseTasks" Version="2.5.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LibTriboroughBridge-ChorusPlugin\LibTriboroughBridge-ChorusPlugin.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\DistFiles\about.htm">
+      <Link>about.htm</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\DistFiles\LogoForAbout.png">
+      <Link>LogoForAbout.png</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="CreateL10nsDir" AfterTargets="Build">
+    <MakeDir Directories="$(OutputPath)/localizations" />
+  </Target>
+
+</Project>

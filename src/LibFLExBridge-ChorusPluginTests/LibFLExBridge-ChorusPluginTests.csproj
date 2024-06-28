@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LibFLExBridgeChorusPluginTests</RootNamespace>
+    <AssemblyName>LibFLExBridge-ChorusPluginTests</AssemblyName>
+    <Description>Unit tests for LibFLExBridge-ChorusPlugin</Description>
+    <IsPackable>false</IsPackable>
+    <AppConfig>..\AppForTests.config</AppConfig>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3" PrivateAssets="all" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="SIL.Chorus.LibChorus.TestUtilities" Version="$(ChorusVersion)" />
+    <PackageReference Include="SIL.Chorus.Mercurial" Version="6.*" IncludeAssets="build" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="TestData\DataNotebook_Ann.ntbk" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\DataNotebook_Common.ntbk" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\DataNotebook_Susanna.ntbk" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\Language Explorer\Configuration\DictionaryConfiguration.xsd" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LibFLExBridge-ChorusPlugin\LibFLExBridge-ChorusPlugin.csproj" />
+  </ItemGroup>
+
+</Project>

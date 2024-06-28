@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LfMergeBridgeTestApp</RootNamespace>
+    <AssemblyName>LfMergeBridgeTestApp</AssemblyName>
+    <Description>LfMergeBridge test app</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LfMergeBridge\LfMergeBridge.csproj" />
+  </ItemGroup>
+
+</Project>

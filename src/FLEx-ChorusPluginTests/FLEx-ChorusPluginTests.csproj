@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>FLEx_ChorusPluginTests</RootNamespace>
+    <AssemblyName>FLEx-ChorusPluginTests</AssemblyName>
+    <Description>Unit tests for FLEx-ChorusPlugin</Description>
+    <IsPackable>false</IsPackable>
+    <AppConfig>..\AppForTests.config</AppConfig>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3" PrivateAssets="all" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="SIL.Chorus.ChorusMerge" Version="$(ChorusVersion)" />
+    <PackageReference Include="SIL.Chorus.LibChorus.TestUtilities" Version="$(ChorusVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLEx-ChorusPlugin\FLEx-ChorusPlugin.csproj" />
+    <ProjectReference Include="..\TriboroughBridge-ChorusPlugin\TriboroughBridge-ChorusPlugin.csproj" />
+  </ItemGroup>
+
+</Project>

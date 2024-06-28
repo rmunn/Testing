@@ -1,0 +1,36 @@
+Source: flexbridge
+Section: misc
+Priority: extra
+Maintainer: FLEx Dev Team <FLEx_DevTeam@sil.org>
+Build-Depends: debhelper (>= 11.0.0),
+ cli-common-dev (>= 0.9~),
+ mono-devel (>= 6.8) | mono5-sil,
+ msbuild | mono5-sil-msbuild,
+ libgdiplus (>= 6.0) | libgdiplus5-sil,
+ libenchant-dev,
+ libxklavier-dev,
+ libgtk2.0-dev,
+ curl,
+ wget,
+ unzip,
+ ca-certificates,
+ git
+Standards-Version: 3.9.6
+Homepage: http://projects.palaso.org/projects/fwbridge
+Vcs-Git: https://github.com/sillsdev/flexbridge.git
+Vcs-Browser: https://github.com/sillsdev/flexbridge
+
+Package: flexbridge
+Architecture: any
+Depends: ${misc:Depends}, ${cli:Depends},
+ mono5-sil | mono-runtime (>= 6.8),
+ libgdiplus5-sil | libgdiplus (>= 6.0),
+ fieldworks-applications (>= 9.0),
+ python-is-python2 | python (>= 2.7),
+ unzip,
+ adduser (>= 3.11)
+Description: Allow multiple FieldWorks users to collaborate remotely
+ FLEx Bridge is an application that allows multiple FieldWorks >=8.0 users
+ to collaborate remotely (i.e., not necessarily connected by a local
+ network).  Data can be shared via a local network (which is not really
+ "remote"), the Internet, or a USB memory device.

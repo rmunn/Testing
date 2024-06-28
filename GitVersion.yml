@@ -1,0 +1,24 @@
+mode: ContinuousDeployment
+increment: Patch
+assembly-versioning-scheme: MajorMinor
+assembly-file-versioning-format: '{Major}.{Minor}.{Patch}.{WeightedPreReleaseNumber}'
+branches:
+  master:
+    tag:
+    regex: (origin/)?master
+    is-mainline: true
+  develop:
+    tag: beta
+    regex: (origin/)?develop
+    is-mainline: true
+  pull-request:
+    mode: ContinuousDeployment
+    tag: PR
+  feature:
+    regex: feature[/-]
+    mode: ContinuousDeployment
+    tag: alpha
+ignore:
+  sha: []
+# Tell gitversion to use a version number >= next-version
+next-version: 3.4.1
