@@ -1,3 +1,0 @@
-[submodule "src/WiXInstaller"]
-	path = src/WiXInstaller
-	url = https://github.com/sillsdev/genericinstaller
