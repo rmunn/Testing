@@ -49,7 +49,7 @@ jobs:
 
         SUFFIX=""
         if [ -n "$PR_NUMBER" ]; then
-          SUFFIX="-PR${PR_NUMBER}.${BUILD_NUNBER}"
+          SUFFIX="-PR${PR_NUMBER}.${BUILD_NUMBER}"
         fi
         echo "SEMVER=${MAJOR}.${MINOR}.${PATCH}${SUFFIX}" >> "$GITHUB_ENV"
 
