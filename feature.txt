@@ -1,1 +1,3 @@
 Some code for a new feature
+
+More code on the new feature
