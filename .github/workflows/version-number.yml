@@ -24,9 +24,7 @@ jobs:
 
     - name: Find most recent tag
       shell: bash
-      run: |
-        DESCRIBE=$(git describe --long --match "v*")
-        echo "DESCRIBE=$DESCRIBE" >> "$GITHUB_ENV"
+      run: echo "DESCRIBE=$(git describe --long --match "v*")" >> "$GITHUB_ENV"
 
     - name: Get GitHub build number
       shell: bash
