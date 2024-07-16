@@ -28,7 +28,7 @@ jobs:
 
     - name: Get GitHub build number
       shell: bash
-      run: echo "BUILD_NUMBER=${{ github.run_nunber }}" >> "$GITHUB_ENV"
+      run: echo "BUILD_NUMBER=${{ github.run_number }}" >> "$GITHUB_ENV"
 
     - name: Get PR number for prerelease suffix
       if: github.event_name == 'pull_request'
