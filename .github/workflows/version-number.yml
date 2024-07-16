@@ -50,6 +50,7 @@ jobs:
         SUFFIX=""
         if [ -n "$PR_NUMBER" ]; then
           SUFFIX="-PR${PR_NUMBER}.${BUILD_NUNBER}"
+        fi
         echo "SEMVER=${MAJOR}.${MINOR}.${PATCH}${SUFFIX}" >> "$GITHUB_ENV"
 
     - name: Display version number
