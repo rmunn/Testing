@@ -57,7 +57,7 @@ jobs:
 
     - name: Display version number
       shell: bash
-      run: echo "Calculated version number: $SEMVER"
+      run: echo "Calculated version number is $SEMVER"
 
     # - name: Setup .NET Core
     #   uses: actions/setup-dotnet@v4
