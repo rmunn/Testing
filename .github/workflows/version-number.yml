@@ -67,12 +67,12 @@ jobs:
           # Calculate bump based on commit messages
           RAW_LOG=$(git log --format="%B" "$TAG"..HEAD)
           echo "Raw log: $RAW_LOG"
-          if $(grep -E '\+semver: (breaking|major)' <<<$RAW_LOG); then
+          if $(grep -E '\+semver: (breaking|major)' <<< "$RAW_LOG"); then
             echo "Major bump"
             MAJOR=$(($MAJOR + 1))
             MINOR=0
             PATCH=0
-          elif $(grep -E '\+semver: (feature|minor)' <<<$RAW_LOG); then
+          elif $(grep -E '\+semver: (feature|minor)' <<< "$RAW_LOG"); then
             echo "Minor bump"
             MINOR=$(($MINOR + 1))
             PATCH=0
