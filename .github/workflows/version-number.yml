@@ -27,8 +27,6 @@ jobs:
       run: |
         DESCRIBE=$(git describe --long --match "v*")
         TAG=$(echo "$DESCRIBE" | grep -E -o '^v[0-9]+\.[0-9]+\.[0-9]+')
-        echo "Describe: $DESCRIBE"
-        echo "Tag: $TAG"
         echo "DESCRIBE=$DESCRIBE" >> "$GITHUB_ENV"
         echo "TAG=$TAG" >> "$GITHUB_ENV"
 
@@ -41,9 +39,6 @@ jobs:
         echo "MAJOR=$MAJOR" >> "$GITHUB_ENV"
         echo "MINOR=$MINOR" >> "$GITHUB_ENV"
         echo "PATCH=$PATCH" >> "$GITHUB_ENV"
-        echo "MAJOR=$MAJOR"
-        echo "MINOR=$MINOR"
-        echo "PATCH=$PATCH"
 
     - name: Get GitHub build number
       shell: bash
@@ -66,18 +61,14 @@ jobs:
         if [ -n "$COMMIT_COUNT" -a "$COMMIT_COUNT" -gt 0 ]; then
           # Calculate bump based on commit messages
           RAW_LOG=$(git log --format="%B" "$TAG"..HEAD)
-          echo "Raw log: $RAW_LOG"
           if grep -E '\+semver: (breaking|major)' <<< "$RAW_LOG"; then
-            echo "Major bump"
             MAJOR=$(($MAJOR + 1))
             MINOR=0
             PATCH=0
           elif grep -E '\+semver: (feature|minor)' <<< "$RAW_LOG"; then
-            echo "Minor bump"
             MINOR=$(($MINOR + 1))
             PATCH=0
           else
-            echo "Patch bump"
             PATCH=$(($PATCH + 1))
           fi
         fi
