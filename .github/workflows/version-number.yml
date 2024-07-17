@@ -24,7 +24,21 @@ jobs:
 
     - name: Find most recent tag
       shell: bash
-      run: echo "DESCRIBE=$(git describe --long --match "v*")" >> "$GITHUB_ENV"
+      run: |
+        DESCRIBE=$(git describe --long --match "v*")
+        TAG=$(echo "$DESCRIBE" | sed -E 's/^(v[0-9]+\.[0-9]+\.[0-9]+)/\1/')
+        echo "DESCRIBE=$DESCRIBE" >> "$GITHUB_ENV"
+        echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+    - name: Split version number from tag into major/minor/patch sections
+      shell: bash
+      run: |
+        MAJOR=$(echo "$TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/\1/')
+        MINOR=$(echo "$TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/\2/')
+        PATCH=$(echo "$TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/\3/')
+        echo "MAJOR=$MAJOR" >> "$GITHUB_ENV"
+        echo "MINOR=$MINOR" >> "$GITHUB_ENV"
+        echo "PATCH=$PATCH" >> "$GITHUB_ENV"
 
     - name: Get GitHub build number
       shell: bash
@@ -35,16 +49,28 @@ jobs:
       shell: bash
       run: echo "PR_NUMBER=${{ github.event.number }}" >> "$GITHUB_ENV"
 
-    - name: Calculate version number
+    - name: Calculate version number bump
+      # Same logic as GitVersion:
+      # * "+semver: breaking" or "+semver: major" in commit log will produce major version bump (and reset minor and patch to 0)
+      # * "+semver: feature" or "+semver: minor" in commit log will produce minor version bump (and reset patch to 0)
+      # Default is to bump the patch version
       shell: bash
+      # Git log format "%B" is the raw body with no author's email or anything else
       run: |
-        MAJOR=$(echo "$DESCRIBE" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/\1/')
-        MINOR=$(echo "$DESCRIBE" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/\2/')
-        PATCH=$(echo "$DESCRIBE" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/\3/')
         COMMIT_COUNT=$(echo "$DESCRIBE" | sed -E 's/^[^-]+-([^-]+)-.*$/\1/')
         if [ -n "$COMMIT_COUNT" -a "$COMMIT_COUNT" -gt 0 ]; then
-          # If last tag was v0.1.0, we're building a prerelease of v0.1.1
-          PATCH=$((${PATCH} + 1))
+          # Calculate bump based on commit messages
+          RAW_LOG=$(git log --format="%B" "$TAG"..HEAD)
+          if $(grep -E '\+semver: (breaking|major)' <<<$RAW_LOG); then
+            MAJOR=$(($MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif $(grep -E '\+semver: (feature|minor)' <<<$RAW_LOG); then
+            MINOR=$(($MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$(($PATCH + 1))
+          fi
         fi
 
         SUFFIX=""
