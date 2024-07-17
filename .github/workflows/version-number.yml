@@ -2,7 +2,9 @@ name: Version number
 
 on:
   push:
-    branches: [ develop, master ]
+    # Note: master/main is NOT included here
+    branches: [ develop ]
+    tags: "v*"
   pull_request:
     branches: [ develop ]
 
@@ -49,6 +51,18 @@ jobs:
       shell: bash
       run: echo "PR_NUMBER=${{ github.event.number }}" >> "$GITHUB_ENV"
 
+    - name: Calculate prerelease suffix
+      shell: bash
+      run: |
+        SUFFIX=""
+        if [ -n "$PR_NUMBER" ]; then
+          SUFFIX="-PR${PR_NUMBER}.${BUILD_NUMBER}"
+        elif [ "$GITHUB_REF" = "refs/heads/develop" ]; then
+          SUFFIX="-beta.${BUILD_NUMBER}"
+        fi
+
+        echo "SUFFIX=$SUFFIX" >> "$GITHUB_ENV"
+
     - name: Calculate version number bump
       # Same logic as GitVersion:
       # * "+semver: breaking" or "+semver: major" in commit log will produce major version bump (and reset minor and patch to 0)
@@ -73,10 +87,6 @@ jobs:
           fi
         fi
 
-        SUFFIX=""
-        if [ -n "$PR_NUMBER" ]; then
-          SUFFIX="-PR${PR_NUMBER}.${BUILD_NUMBER}"
-        fi
         echo "SEMVER=${MAJOR}.${MINOR}.${PATCH}${SUFFIX}" >> "$GITHUB_ENV"
 
     - name: Display version number
