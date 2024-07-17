@@ -88,11 +88,18 @@ jobs:
           fi
         fi
 
+        echo "MAJOR=$MAJOR" >> "$GITHUB_ENV"
+        echo "MINOR=$MINOR" >> "$GITHUB_ENV"
+        echo "PATCH=$PATCH" >> "$GITHUB_ENV"
         echo "SEMVER=${MAJOR}.${MINOR}.${PATCH}${SUFFIX}" >> "$GITHUB_ENV"
 
     - name: Display version number
       shell: bash
-      run: echo "Calculated version number is $SEMVER"
+      run: |
+        echo "Calculated version number is $SEMVER"
+        echo "Major is $MAJOR"
+        echo "Minor is $MINOR"
+        echo "Patch is $PATCH"
 
     # - name: Setup .NET Core
     #   uses: actions/setup-dotnet@v4
