@@ -1,0 +1,3 @@
+[web]
+# Set cacerts to the correct absolute path
+# cacerts=D:\Mercurial\cacert.pem
