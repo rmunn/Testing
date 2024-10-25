@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        # mercurial-version:
-        #   - "6.5.1"
+        mercurial-version:
+          - "6.5.1"
         python-version:
           - "3.8"
           - "3.9"
@@ -46,19 +46,24 @@ jobs:
     - name: Checkout Mercurial
       run: hg clone https://repo.mercurial-scm.org/hg
     - name: Checkout hg version to build
-      run: hg checkout 6.5.1
+      run: hg checkout "${VER}"
       working-directory: hg
-      # run: hg checkout $VER
-      # env:
-      #   VER: ${{ matrix.mercurial-version }}
+      env:
+        VER: ${{ matrix.mercurial-version }}
+    - name: Build chg
+      run: make
+      working-directory: hg/contrib/chg
     - name: Build Mercurial
       run: make local
       working-directory: hg
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
       working-directory: hg
+    - name: Move chg binary next to hg prior to upload
+      run: mv contrib/chg/chg .
+      working-directory: hg
     - name: Set executable bit on hg binary before upload
-      run: chmod +x hg/hg
+      run: chmod +x hg/hg hg/chg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
@@ -66,6 +71,7 @@ jobs:
         path: |
           hg/contrib
           hg/COPYING
+          hg/chg
           hg/hg
           hg/hgdemandimport
           hg/hgext
