@@ -1,14 +1,17 @@
 # This is a basic workflow to help you get started with Actions
 
+# TODO: Change "develop" to "master" in `on:` block, then go to bottom of file and remove "echo"
+# (see TODO comment down there)
+
 name: Nuget-CI-CD
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
+  # Triggers the workflow on push or pull request events but only for the develop branch
   push:
-    branches: [ master ]
+    branches: [ develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ develop ]
 
 # Cancel any workflow jobs running if the PR is re-triggered
 concurrency:
@@ -114,4 +117,5 @@ jobs:
 
     - name: Publish nuget packages
       if: github.event_name == 'push'
-      run: nuget push **/*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{ secrets.SILLSDEV_PUBLISH_NUGET_ORG }}
+      run: echo nuget push **/*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{ secrets.SILLSDEV_PUBLISH_NUGET_ORG }}
+      # TODO: REMOVE "echo" word when bringing back into original project
