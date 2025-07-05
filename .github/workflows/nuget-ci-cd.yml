@@ -6,9 +6,9 @@ name: Nuget-CI-CD
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, develop ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ master ]
 
 # Cancel any workflow jobs running if the PR is re-triggered
 concurrency:
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   build-python:
+    # Use specific Ubuntu version rather than ubuntu-latest, so we can control when to upgrade the runner
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -35,12 +36,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
-    - name: Check open file limit
-      run: ulimit -n
-    - name: Try setting file limit to 4096
-      run: ulimit -n 4096
-    - name: Check open file limit again
-      run: ulimit -n
     - name: Install Python setuptools
       run: pip install setuptools
     - name: Checkout Mercurial
@@ -62,8 +57,9 @@ jobs:
     - name: Move chg binary next to hg prior to upload
       run: mv contrib/chg/chg .
       working-directory: hg
-    - name: Set executable bit on hg binary before upload
-      run: chmod +x hg/hg hg/chg
+    - name: Set executable bit on hg and chg binaries before upload
+      run: chmod +x hg chg
+      working-directory: hg
     - name: Upload Mercurial build results
       uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
       with:
@@ -83,7 +79,7 @@ jobs:
     needs: build-python
     steps:
     - name: Checkout
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set Beta Version
@@ -94,21 +90,28 @@ jobs:
       run: echo "release-suffix=." >> $GITHUB_ENV
 
     - name: Download Mercurial builds
-      uses: actions/download-artifact@8caf195ad4b1dee92908e23f56eeb0696f1dd42d # v4.1.5
+      uses: actions/download-artifact@v4
       with:
         path: linux-x64/Mercurial
         pattern: hg-for-python-*
         merge-multiple: true
 
     - name: See if executable bit was preserved
-      run: ls -l linux-x64/Mercurial/hg
+      run: ls -l linux-x64/Mercurial
+
+    - name: Set executable bit on hg and chg binaries again to work around download-artifact bug
+      run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
 
     - name: Nuget pack
       run: dotnet msbuild -target:Build build/SIL.Chorus.Mercurial.proj -property:PreRelease=${{ env.release-suffix }} -property:BuildCounter=${{ github.run_number }}
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+      uses: actions/upload-artifact@v4
       with:
         name: packages
         path: ./**/*.nupkg
         if-no-files-found: error
+
+    - name: Publish nuget packages
+      if: github.event_name == 'push'
+      run: nuget push **/*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{ secrets.SILLSDEV_PUBLISH_NUGET_ORG }}

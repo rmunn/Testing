@@ -3,10 +3,10 @@
 		<RootDir Condition="'$(teamcity_version)' == '' Or '$(OS)'!='Windows_NT'">$(MSBuildProjectDirectory)\..</RootDir>
 		<RootDir Condition="'$(teamcity_version)' != '' And '$(OS)'=='Windows_NT'">$(teamcity_build_checkoutDir)</RootDir>
 		<teamcity_agent_home_dir Condition="'$(teamcity_agent_home_dir)'=='' And '$(OS)'!='Windows_NT'">/var/lib/TeamCity/agent</teamcity_agent_home_dir>
-		<BuildCounter Condition="'$(BuildCounter)' == ''">0</BuildCounter>
+		<BuildCounter Condition="'$(BuildCounter)' == ''">37</BuildCounter>
 		<NuGetBuildDir>$(MSBuildProjectDirectory)/../output/files</NuGetBuildDir>
-		<PreRelease Condition="'$(PreRelease)' == ''">-beta</PreRelease>
-		<PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2$(PreRelease)$(BuildCounter)</PkgVersion>
+		<!-- <PreRelease Condition="'$(PreRelease)' == ''">-beta</PreRelease> -->
+		<PkgVersion Condition="'$(PkgVersion)' == ''">6.5.1$(PreRelease).$(BuildCounter)</PkgVersion>
 	</PropertyGroup>
 
 	<Import Project="NuGet.targets"/>
@@ -20,7 +20,7 @@
 		<RemoveDir Directories="$(NuGetBuildDir)/.." />
 	</Target>
 
-	<Target Name="BuildPackage" DependsOnTargets="Clean;CheckPrerequisites">
+	<Target Name="BuildPackage" DependsOnTargets="Clean">
 		<PropertyGroup>
 			<NuGetPackageDir>$(MSBuildProjectDirectory)/../output</NuGetPackageDir>
 			<NuGetRuntimeFolderWin>$(NuGetBuildDir)/runtimes/win/native</NuGetRuntimeFolderWin>

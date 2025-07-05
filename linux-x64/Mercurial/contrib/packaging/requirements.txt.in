@@ -1,0 +1,5 @@
+# Declare requirements for generating the compiled (frozen)
+# set of requirements in ./requirements.txt.
+
+docutils
+jinja2

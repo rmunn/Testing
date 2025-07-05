@@ -1,0 +1,165 @@
+# Don't run pipelines on branch "merge", since we're fast-forward only.
+# Gitlab sees a new branch (since e.g. `topic/stable/my-topic` becomes
+# `branch/stable`), but the hash hasn't changed. There is no reason to
+# re-run the CI in our case, since we haven't built up any specific automation.
+# Right now it's just wasted CI and developer time.
+# One can still run the pipeline manually via the web interface,
+# like in the case of releases, to make *extra* sure that the actual branch
+# has succeeded.
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^branch\/.*/ && $CI_PIPELINE_SOURCE != "web"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: always
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+      when: always
+
+stages:
+  - tests
+
+image: registry.heptapod.net/mercurial/ci-images/mercurial-core:$HG_CI_IMAGE_TAG
+
+variables:
+    PYTHON: python
+    TEST_HGMODULEPOLICY: "allow"
+    HG_CI_IMAGE_TAG: "v1.0"
+    TEST_HGTESTS_ALLOW_NETIO: "0"
+
+.all_template: &all
+  when: on_success
+
+.runtests_template: &runtests
+    <<: *all
+    stage: tests
+    # The runner made a clone as root.
+    # We make a new clone owned by user used to run the step.
+    before_script:
+      - hg clone . /tmp/mercurial-ci/ --noupdate --config phases.publish=no
+      - hg -R /tmp/mercurial-ci/ update `hg log --rev '.' --template '{node}'`
+      - cd /tmp/mercurial-ci/
+      - ls -1 tests/test-check-*.* > /tmp/check-tests.txt
+      - black --version
+      - clang-format --version
+    script:
+        - echo "python used, $PYTHON"
+        - $PYTHON --version
+        - echo "$RUNTEST_ARGS"
+        - HGTESTS_ALLOW_NETIO="$TEST_HGTESTS_ALLOW_NETIO" HGMODULEPOLICY="$TEST_HGMODULEPOLICY" "$PYTHON" tests/run-tests.py --color=always $RUNTEST_ARGS
+
+checks:
+    <<: *runtests
+    variables:
+        RUNTEST_ARGS: "--time --test-list /tmp/check-tests.txt"
+        PYTHON: python3
+        CI_CLEVER_CLOUD_FLAVOR: S
+
+rust-cargo-test:
+    <<: *all
+    stage: tests
+    script:
+        - echo "python used, $PYTHON"
+        - make rust-tests
+        - make cargo-clippy
+    variables:
+        PYTHON: python3
+        CI_CLEVER_CLOUD_FLAVOR: S
+
+test-c:
+    <<: *runtests
+    variables:
+        RUNTEST_ARGS: " --no-rust --blacklist /tmp/check-tests.txt"
+        PYTHON: python3
+        TEST_HGMODULEPOLICY: "c"
+        TEST_HGTESTS_ALLOW_NETIO: "1"
+
+test-pure:
+    <<: *runtests
+    variables:
+        RUNTEST_ARGS: "--pure --blacklist /tmp/check-tests.txt"
+        PYTHON: python3
+        TEST_HGMODULEPOLICY: "py"
+
+test-rust:
+    <<: *runtests
+    variables:
+        HGWITHRUSTEXT: cpython
+        RUNTEST_ARGS: "--rust --blacklist /tmp/check-tests.txt"
+        PYTHON: python3
+        TEST_HGMODULEPOLICY: "rust+c"
+
+test-rhg:
+    <<: *runtests
+    variables:
+        HGWITHRUSTEXT: cpython
+        RUNTEST_ARGS: "--rust --rhg --blacklist /tmp/check-tests.txt"
+        PYTHON: python3
+        TEST_HGMODULEPOLICY: "rust+c"
+
+test-chg:
+    <<: *runtests
+    variables:
+        PYTHON: python3
+        RUNTEST_ARGS: "--blacklist /tmp/check-tests.txt --chg"
+        TEST_HGMODULEPOLICY: "c"
+
+check-pytype:
+    extends: .runtests_template
+    before_script:
+      - hg clone . /tmp/mercurial-ci/ --noupdate --config phases.publish=no
+      - hg -R /tmp/mercurial-ci/ update `hg log --rev '.' --template '{node}'`
+      - cd /tmp/mercurial-ci/
+      - make local PYTHON=$PYTHON
+      - $PYTHON -m pip install --user -U libcst==0.3.20 pytype==2022.11.18
+      - ./contrib/setup-pytype.sh
+    script:
+      - echo "Entering script section"
+      - sh contrib/check-pytype.sh
+    variables:
+        PYTHON: python3
+
+# `sh.exe --login` sets a couple of extra environment variables that are defined
+# in the MinGW shell, but switches CWD to /home/$username.  The previous value
+# is stored in OLDPWD.  Of the added variables, MSYSTEM is crucial to running
+# run-tests.py- it is needed to make run-tests.py generate a `python3` script
+# that satisfies the various shebang lines and delegates to `py -3`.
+.window_runtests_template: &windows_runtests
+    <<: *all
+    when: manual  # we don't have any Windows runners anymore at the moment
+    stage: tests
+    before_script:
+      - C:/MinGW/msys/1.0/bin/sh.exe --login -c 'cd "$OLDPWD" && ls -1 tests/test-check-*.* > C:/Temp/check-tests.txt'
+      # TODO: find/install cvs, bzr, perforce, gpg, sqlite3
+
+    script:
+        - echo "Entering script section"
+        - echo "python used, $Env:PYTHON"
+        - Invoke-Expression "$Env:PYTHON -V"
+        - Invoke-Expression "$Env:PYTHON -m black --version"
+        - echo "$Env:RUNTEST_ARGS"
+        - echo "$Env:TMP"
+        - echo "$Env:TEMP"
+
+        - C:/MinGW/msys/1.0/bin/sh.exe --login -c 'cd "$OLDPWD" && HGTESTS_ALLOW_NETIO="$TEST_HGTESTS_ALLOW_NETIO" HGMODULEPOLICY="$TEST_HGMODULEPOLICY" $PYTHON tests/run-tests.py --color=always $RUNTEST_ARGS'
+
+windows:
+    <<: *windows_runtests
+    tags:
+      - windows
+    variables:
+        TEST_HGMODULEPOLICY: "c"
+        RUNTEST_ARGS: "--blacklist C:/Temp/check-tests.txt"
+        PYTHON: py -3
+
+windows-pyox:
+    <<: *windows_runtests
+    tags:
+      - windows
+    variables:
+        TEST_HGMODULEPOLICY: "c"
+        RUNTEST_ARGS: "--blacklist C:/Temp/check-tests.txt --pyoxidized"
+        PYTHON: py -3
