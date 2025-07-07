@@ -145,13 +145,13 @@ jobs:
       run: 7z x mercurial-files.7z
 
     - name: List files before pack
-      run: dir /s
+      run: dir -Recurse
 
     - name: Nuget pack
       run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
 
     - name: List files after pack
-      run: dir /s
+      run: dir -Recurse
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
