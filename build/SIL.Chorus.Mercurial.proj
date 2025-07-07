@@ -5,11 +5,12 @@
 		<teamcity_agent_home_dir Condition="'$(teamcity_agent_home_dir)'=='' And '$(OS)'!='Windows_NT'">/var/lib/TeamCity/agent</teamcity_agent_home_dir>
 		<BuildCounter Condition="'$(BuildCounter)' == ''">0</BuildCounter>
 		<NuGetBuildDir>$(MSBuildProjectDirectory)/../output/files</NuGetBuildDir>
-		<NuSpecFile>$(MSBuildProjectDirectory)/SIL.Chorus.Mercurial.nuspec</NuSpecFile>
 		<!-- <PreRelease Condition="'$(PreRelease)' == ''">-beta</PreRelease> -->
 		<!-- Version "6.5.2" is really Mercurial 7.0.1 but I'm being cautious -->
 		<PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2.$(BuildCounter)</PkgVersion>
 		<!-- <PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2$(PreRelease).$(BuildCounter)</PkgVersion> -->
+		<NuSpecFile>$(MSBuildProjectDirectory)/../assets/SIL.Chorus.Mercurial.nuspec</NuSpecFile>
+		<NuSpecProperties>version=$(PkgVersion)</NuSpecProperties>
 	</PropertyGroup>
 
 	<Import Project="NuGet.targets"/>
@@ -48,7 +49,9 @@
 		<Copy SourceFiles="@(TargetFile)" DestinationFolder="$(NuGetBuildDir)\buildMultiTargeting" />
 		<Copy SourceFiles="@(NuSpecFile)" DestinationFolder="$(NuGetBuildDir)" />
 		<Copy SourceFiles="$(RootDir)\README.md" DestinationFolder="$(NuGetDocsFolder)" />
-		<Exec Command="$(NuGetCommand) pack -Version $(PkgVersion) -o $(NuGetPackageDir)"
+		<Exec Condition="'$(NuGetCommand)' == '$(NuGetExePath)'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
+			WorkingDirectory="$(NuGetBuildDir)"/>
+		<Exec Condition="'$(NuGetCommand)' == 'dotnet'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -o $(NuGetPackageDir)"
 			WorkingDirectory="$(NuGetBuildDir)"/>
 	</Target>
 
