@@ -148,7 +148,8 @@ jobs:
       run: dir -Recurse
 
     - name: Nuget pack
-      run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
+      run: dotnet build build/SIL.Chorus.Mercurial.proj -property:BuildCounter=${{ github.run_number }}
+      #run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
 
     - name: List files after pack
       run: dir -Recurse

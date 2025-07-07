@@ -9,8 +9,6 @@
 		<!-- Version "6.5.2" is really Mercurial 7.0.1 but I'm being cautious -->
 		<PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2.$(BuildCounter)</PkgVersion>
 		<!-- <PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2$(PreRelease).$(BuildCounter)</PkgVersion> -->
-		<NuSpecFile>$(MSBuildProjectDirectory)/../assets/SIL.Chorus.Mercurial.nuspec</NuSpecFile>
-		<NuSpecProperties>version=$(PkgVersion)</NuSpecProperties>
 	</PropertyGroup>
 
 	<Import Project="NuGet.targets"/>
@@ -52,9 +50,7 @@
 		<Copy SourceFiles="@(TargetFile)" DestinationFolder="$(NuGetBuildDir)\buildMultiTargeting" />
 		<Copy SourceFiles="@(NuSpecFile)" DestinationFolder="$(NuGetBuildDir)" />
 		<Copy SourceFiles="$(RootDir)\README.md" DestinationFolder="$(NuGetDocsFolder)" />
-		<Exec Condition="'$(NuGetCommand)' == '$(NuGetExePath)'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
-			WorkingDirectory="$(NuGetBuildDir)"/>
-		<Exec Condition="'$(NuGetCommand)' == 'dotnet'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) $(NuGetBuildDir)\SIL.Chorus.Mercurial.nuspec"
+		<Exec Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
 			WorkingDirectory="$(NuGetBuildDir)"/>
 	</Target>
 
