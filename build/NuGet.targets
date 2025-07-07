@@ -61,7 +61,6 @@
             <OutputFilename ParameterType="System.String" Required="true" />
         </ParameterGroup>
         <Task>
-            <Reference Include="System.Core" />
             <Using Namespace="System" />
             <Using Namespace="System.IO" />
             <Using Namespace="System.Net" />
