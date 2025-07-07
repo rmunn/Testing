@@ -20,6 +20,9 @@
 		<CallTarget Targets="BuildPackage"/>
 	</Target>
 
+	<Target Name="Pack" DependsOnTargets="BuildPackage">
+	</Target>
+
 	<Target Name="Clean">
 		<RemoveDir Directories="$(NuGetBuildDir)/.." />
 	</Target>
