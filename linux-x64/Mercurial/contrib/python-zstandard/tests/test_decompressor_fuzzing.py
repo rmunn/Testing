@@ -10,17 +10,11 @@ except ImportError:
 
 import zstandard as zstd
 
-from .common import (
-    make_cffi,
-    NonClosingBytesIO,
-    random_input_data,
-    TestCase,
-)
+from .common import random_input_data
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestDecompressor_stream_reader_fuzzing(TestCase):
+class TestDecompressor_stream_reader_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
             hypothesis.HealthCheck.large_base_example,
@@ -304,6 +298,7 @@ class TestDecompressor_stream_reader_fuzzing(TestCase):
 
     @hypothesis.settings(
         suppress_health_check=[
+            hypothesis.HealthCheck.data_too_large,
             hypothesis.HealthCheck.large_base_example,
             hypothesis.HealthCheck.too_slow,
         ]
@@ -344,25 +339,24 @@ class TestDecompressor_stream_reader_fuzzing(TestCase):
         ]
     )
     @hypothesis.given(
-        originals=strategies.data(),
-        frame_count=strategies.integers(min_value=2, max_value=10),
+        chunks=strategies.lists(
+            strategies.sampled_from(random_input_data()),
+            min_size=2,
+            max_size=10,
+        ),
         level=strategies.integers(min_value=1, max_value=5),
         source_read_size=strategies.integers(1, 1048576),
         read_sizes=strategies.data(),
     )
-    def test_multiple_frames(
-        self, originals, frame_count, level, source_read_size, read_sizes
-    ):
-
+    def test_multiple_frames(self, chunks, level, source_read_size, read_sizes):
         cctx = zstd.ZstdCompressor(level=level)
         source = io.BytesIO()
         buffer = io.BytesIO()
         writer = cctx.stream_writer(buffer)
 
-        for i in range(frame_count):
-            data = originals.draw(strategies.sampled_from(random_input_data()))
-            source.write(data)
-            writer.write(data)
+        for chunk in chunks:
+            source.write(chunk)
+            writer.write(chunk)
             writer.flush(zstd.FLUSH_FRAME)
 
         dctx = zstd.ZstdDecompressor()
@@ -386,8 +380,7 @@ class TestDecompressor_stream_reader_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestDecompressor_stream_writer_fuzzing(TestCase):
+class TestDecompressor_stream_writer_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
             hypothesis.HealthCheck.large_base_example,
@@ -408,9 +401,11 @@ class TestDecompressor_stream_writer_fuzzing(TestCase):
 
         dctx = zstd.ZstdDecompressor()
         source = io.BytesIO(frame)
-        dest = NonClosingBytesIO()
+        dest = io.BytesIO()
 
-        with dctx.stream_writer(dest, write_size=write_size) as decompressor:
+        with dctx.stream_writer(
+            dest, write_size=write_size, closefd=False
+        ) as decompressor:
             while True:
                 input_size = input_sizes.draw(strategies.integers(1, 4096))
                 chunk = source.read(input_size)
@@ -423,8 +418,7 @@ class TestDecompressor_stream_writer_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestDecompressor_copy_stream_fuzzing(TestCase):
+class TestDecompressor_copy_stream_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
             hypothesis.HealthCheck.large_base_example,
@@ -455,8 +449,7 @@ class TestDecompressor_copy_stream_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestDecompressor_decompressobj_fuzzing(TestCase):
+class TestDecompressor_decompressobj_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
             hypothesis.HealthCheck.large_base_example,
@@ -525,10 +518,112 @@ class TestDecompressor_decompressobj_fuzzing(TestCase):
 
         self.assertEqual(b"".join(chunks), original)
 
+    @hypothesis.given(
+        chunks=strategies.lists(
+            strategies.sampled_from(random_input_data()),
+            min_size=2,
+            max_size=10,
+        ),
+        level=strategies.integers(min_value=1, max_value=5),
+        write_size=strategies.integers(
+            min_value=1,
+            max_value=4 * zstd.DECOMPRESSION_RECOMMENDED_OUTPUT_SIZE,
+        ),
+        read_sizes=strategies.data(),
+    )
+    def test_read_across_frames_false(
+        self, chunks, level, write_size, read_sizes
+    ):
+        cctx = zstd.ZstdCompressor(level=level)
+
+        source = io.BytesIO()
+        source_chunks = []
+        compressed = io.BytesIO()
+
+        for chunk in chunks:
+            source.write(chunk)
+            source_chunks.append(chunk)
+            compressed.write(cctx.compress(chunk))
+
+        compressed.seek(0)
+
+        dctx = zstd.ZstdDecompressor()
+        dobj = dctx.decompressobj(
+            write_size=write_size, read_across_frames=False
+        )
+
+        decompressed = io.BytesIO()
+
+        while True:
+            read_size = read_sizes.draw(strategies.integers(1, 4096))
+            chunk = compressed.read(read_size)
+            if not chunk:
+                break
+
+            try:
+                decompressed.write(dobj.decompress(chunk))
+            except zstd.ZstdError as e:
+                if e.args[0] == "cannot use a decompressobj multiple times":
+                    break
+                else:
+                    raise
+
+        self.assertEqual(decompressed.getvalue(), source_chunks[0])
+
+    @hypothesis.settings(
+        suppress_health_check=[
+            hypothesis.HealthCheck.large_base_example,
+        ]
+    )
+    @hypothesis.given(
+        chunks=strategies.lists(
+            strategies.sampled_from(random_input_data()),
+            min_size=2,
+            max_size=10,
+        ),
+        level=strategies.integers(min_value=1, max_value=5),
+        write_size=strategies.integers(
+            min_value=1,
+            max_value=4 * zstd.DECOMPRESSION_RECOMMENDED_OUTPUT_SIZE,
+        ),
+        read_sizes=strategies.data(),
+    )
+    def test_read_across_frames_true(
+        self, chunks, level, write_size, read_sizes
+    ):
+        cctx = zstd.ZstdCompressor(level=level)
+
+        source = io.BytesIO()
+        source_chunks = []
+        compressed = io.BytesIO()
+
+        for chunk in chunks:
+            source.write(chunk)
+            source_chunks.append(chunk)
+            compressed.write(cctx.compress(chunk))
+
+        compressed.seek(0)
+
+        dctx = zstd.ZstdDecompressor()
+        dobj = dctx.decompressobj(
+            write_size=write_size, read_across_frames=True
+        )
+
+        decompressed = io.BytesIO()
+
+        while True:
+            read_size = read_sizes.draw(strategies.integers(1, 4096))
+            chunk = compressed.read(read_size)
+            if not chunk:
+                break
+
+            decompressed.write(dobj.decompress(chunk))
+
+        self.assertEqual(decompressed.getvalue(), source.getvalue())
+
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestDecompressor_read_to_iter_fuzzing(TestCase):
+class TestDecompressor_read_to_iter_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.sampled_from(random_input_data()),
         level=strategies.integers(min_value=1, max_value=5),
@@ -554,7 +649,11 @@ class TestDecompressor_read_to_iter_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-class TestDecompressor_multi_decompress_to_buffer_fuzzing(TestCase):
+@unittest.skipUnless(
+    "multi_decompress_to_buffer" in zstd.backend_features,
+    "multi_decompress_to_buffer not available",
+)
+class TestDecompressor_multi_decompress_to_buffer_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.lists(
             strategies.sampled_from(random_input_data()),
@@ -572,9 +671,6 @@ class TestDecompressor_multi_decompress_to_buffer_fuzzing(TestCase):
         cctx = zstd.ZstdCompressor(
             level=1, write_content_size=True, write_checksum=True, **kwargs
         )
-
-        if not hasattr(cctx, "multi_compress_to_buffer"):
-            self.skipTest("multi_compress_to_buffer not available")
 
         frames_buffer = cctx.multi_compress_to_buffer(original, threads=-1)
 

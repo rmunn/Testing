@@ -72,9 +72,7 @@ test-check-commit.t
 test-check-config.t
 test-check-execute.t
 test-check-help.t
-test-check-interfaces.py
 test-check-module-imports.t
-test-check-py3-compat.t
 test-check-pyflakes.t
 test-check-pylint.t
 test-check-shbang.t
@@ -337,9 +335,6 @@ test-import-unknown.t
 test-import.t
 test-imports-checker.t
 test-incoming-outgoing.t
-test-infinitepush-bundlestore.t
-test-infinitepush-ci.t
-test-infinitepush.t
 test-inherit-mode.t
 test-init.t
 test-install.t

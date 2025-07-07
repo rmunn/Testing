@@ -161,7 +161,11 @@ testpats = [
         (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
         (r'\[\[\s+[^\]]*\]\]', "don't use '[[ ]]', use '[ ]'"),
         (r'^alias\b.*=', "don't use alias, use a function"),
-        (r'if\s*!', "don't use '!' to negate exit status"),
+        # Solaris sh can not negate exit status with '!'
+        (
+            r'if\s*!',
+            "don't use '!' to negate exit status (use `||` or if/else)",
+        ),
         (r'/dev/u?random', "don't use entropy, use /dev/zero"),
         (r'do\s*true;\s*done', "don't use true as loop body, use sleep 0"),
         (
@@ -368,7 +372,7 @@ commonpypats = [
             r'\s(\+=|-=|!=|<>|<=|>=|<<=|>>=|%=)\S',
             "missing whitespace around operator",
         ),
-        (r'[^^+=*/!<>&| %-](\s=|=\s)[^= ]', "wrong whitespace around ="),
+        (r'[^^+=*/!<>&| %-:](\s=|=\s)[^= ]', "wrong whitespace around ="),
         (
             r'raise [^,(]+, (\([^\)]+\)|[^,\(\)]+)$',
             "don't use old-style two-argument raise, use Exception(message)",
@@ -383,12 +387,6 @@ commonpypats = [
             "use True/False for constant Boolean expression",
         ),
         (r'^\s*if False(:| +and)', 'Remove code instead of using `if False`'),
-        (
-            r'(?:(?<!def)\s+|\()hasattr\(',
-            'hasattr(foo, bar) is broken on py2, use util.safehasattr(foo, bar) '
-            'instead',
-            r'#.*hasattr-py3-only',
-        ),
         (r'opener\([^)]*\).read\(', "use opener.read() instead"),
         (r'opener\([^)]*\).write\(', "use opener.write() instead"),
         (r'(?i)descend[e]nt', "the proper spelling is descendAnt"),
@@ -473,7 +471,7 @@ pypats = [
          (?# this regexp can't use [^...] style,
            # because _preparepats forcibly adds "\n" into [^...],
            # even though this regexp wants match it against "\n")''',
-            "missing _() in ui message (use () to hide false-positives)",
+            "missing _() in ui message (use `noi18n` method to hide false-positives)",
         ),
     ]
     + commonpypats[0],
@@ -818,7 +816,7 @@ def checkfile(
             except UnicodeDecodeError as e:
                 print("%s while reading %s" % (e, f))
                 return result
-    except IOError as e:
+    except OSError as e:
         print("Skipping %s, %s" % (f, str(e).split(':', 1)[0]))
         return result
 

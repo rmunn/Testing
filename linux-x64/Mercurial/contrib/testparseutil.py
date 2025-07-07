@@ -48,7 +48,7 @@ def sysstr(s):
 
 
 def opentext(f):
-    return open(f, 'r')
+    return open(f)
 
 
 def b2s(x):
@@ -304,7 +304,7 @@ class fileheredocmatcher(embeddedmatcher):
     _prefix = '  > '
 
     def __init__(self, desc, namepat):
-        super(fileheredocmatcher, self).__init__(desc)
+        super().__init__(desc)
 
         # build the pattern to match against cases below (and ">>"
         # variants), and to return a target filename string as 'name'
@@ -426,7 +426,7 @@ class pydoctestmatcher(embeddedmatcher):
     _outputre = re.compile(r' {2}$| {2}[^$]')
 
     def __init__(self):
-        super(pydoctestmatcher, self).__init__("doctest style python code")
+        super().__init__("doctest style python code")
 
     def startsat(self, line):
         # ctx is "True"
@@ -500,7 +500,7 @@ class pyheredocmatcher(embeddedmatcher):
     )
 
     def __init__(self):
-        super(pyheredocmatcher, self).__init__("heredoc python invocation")
+        super().__init__("heredoc python invocation")
 
     def startsat(self, line):
         # ctx is END-LINE-OF-EMBEDDED-CODE

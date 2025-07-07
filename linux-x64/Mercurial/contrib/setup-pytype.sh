@@ -5,7 +5,7 @@ set -u
 
 # Find the python3 setup that would run pytype
 PYTYPE=`which pytype`
-PYTHON3=`head -n1 ${PYTYPE} | sed -s 's/#!//'`
+PYTHON3=${PYTHON:-`head -n1 ${PYTYPE} | sed -s 's/#!//'`}
 
 # Existing stubs that pytype processes live here
 TYPESHED=$(${PYTHON3} -c "import pytype; print(pytype.__path__[0])")/typeshed/stubs

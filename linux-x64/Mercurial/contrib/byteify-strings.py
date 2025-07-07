@@ -212,18 +212,14 @@ def replacetokens(tokens, opts):
             fn = t.string
 
             # *attr() builtins don't accept byte strings to 2nd argument.
-            if (
-                fn
-                in (
-                    'getattr',
-                    'setattr',
-                    'hasattr',
-                    'safehasattr',
-                    'wrapfunction',
-                    'wrapclass',
-                    'addattr',
-                )
-                and (opts['allow-attr-methods'] or not _isop(i - 1, '.'))
+            if fn in (
+                'getattr',
+                'setattr',
+                'hasattr',
+                'safehasattr',
+                'wrapfunction',
+                'wrapclass',
+                'addattr',
             ):
                 arg1idx = _findargnofcall(1)
                 if arg1idx is not None:
@@ -312,12 +308,6 @@ def main():
         help='rewrite iteritems() and itervalues()',
     ),
     ap.add_argument(
-        '--allow-attr-methods',
-        action='store_true',
-        default=False,
-        help='also handle attr*() when they are methods',
-    ),
-    ap.add_argument(
         '--treat-as-kwargs',
         nargs="+",
         default=[],
@@ -328,7 +318,6 @@ def main():
     opts = {
         'dictiter': args.dictiter,
         'treat-as-kwargs': set(args.treat_as_kwargs),
-        'allow-attr-methods': args.allow_attr_methods,
     }
     for fname in args.files:
         fname = os.path.realpath(fname)

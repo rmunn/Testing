@@ -4,9 +4,11 @@
 # This software may be modified and distributed under the terms
 # of the BSD license. See the LICENSE file for details.
 
+from __future__ import absolute_import
 
 import cffi
 import distutils.ccompiler
+import distutils.sysconfig
 import os
 import re
 import subprocess
@@ -16,57 +18,14 @@ import tempfile
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 SOURCES = [
-    "zstd/%s" % p
-    for p in (
-        "common/debug.c",
-        "common/entropy_common.c",
-        "common/error_private.c",
-        "common/fse_decompress.c",
-        "common/pool.c",
-        "common/threading.c",
-        "common/xxhash.c",
-        "common/zstd_common.c",
-        "compress/fse_compress.c",
-        "compress/hist.c",
-        "compress/huf_compress.c",
-        "compress/zstd_compress.c",
-        "compress/zstd_compress_literals.c",
-        "compress/zstd_compress_sequences.c",
-        "compress/zstd_double_fast.c",
-        "compress/zstd_fast.c",
-        "compress/zstd_lazy.c",
-        "compress/zstd_ldm.c",
-        "compress/zstd_opt.c",
-        "compress/zstdmt_compress.c",
-        "decompress/huf_decompress.c",
-        "decompress/zstd_ddict.c",
-        "decompress/zstd_decompress.c",
-        "decompress/zstd_decompress_block.c",
-        "dictBuilder/cover.c",
-        "dictBuilder/fastcover.c",
-        "dictBuilder/divsufsort.c",
-        "dictBuilder/zdict.c",
-    )
+    "zstd/zstd.c",
 ]
 
 # Headers whose preprocessed output will be fed into cdef().
-HEADERS = [
-    os.path.join(HERE, "zstd", *p)
-    for p in (
-        ("zstd.h",),
-        ("dictBuilder", "zdict.h"),
-    )
-]
+HEADERS = [os.path.join(HERE, "zstd", p) for p in ("zstd.h", "zdict.h")]
 
 INCLUDE_DIRS = [
-    os.path.join(HERE, d)
-    for d in (
-        "zstd",
-        "zstd/common",
-        "zstd/compress",
-        "zstd/decompress",
-        "zstd/dictBuilder",
-    )
+    os.path.join(HERE, "zstd"),
 ]
 
 # cffi can't parse some of the primitives in zstd.h. So we invoke the
@@ -77,22 +36,28 @@ compiler = distutils.ccompiler.new_compiler()
 if hasattr(compiler, "initialize"):
     compiler.initialize()
 
-# Distutils doesn't set compiler.preprocessor, so invoke the preprocessor
-# manually.
+# This performs platform specific customizations, including honoring
+# environment variables like CC.
+distutils.sysconfig.customize_compiler(compiler)
+
+# Distutils doesn't always set compiler.preprocessor, so invoke the
+# preprocessor manually when needed.
+args = getattr(compiler, "preprocessor", None)
 if compiler.compiler_type == "unix":
-    args = list(compiler.executables["compiler"])
+    if not args:
+        # Using .compiler respects the CC environment variable.
+        args = [compiler.compiler[0], "-E"]
     args.extend(
         [
-            "-E",
             "-DZSTD_STATIC_LINKING_ONLY",
             "-DZDICT_STATIC_LINKING_ONLY",
         ]
     )
 elif compiler.compiler_type == "msvc":
-    args = [compiler.cc]
+    if not args:
+        args = [compiler.cc, "/EP"]
     args.extend(
         [
-            "/EP",
             "/DZSTD_STATIC_LINKING_ONLY",
             "/DZDICT_STATIC_LINKING_ONLY",
         ]
@@ -136,9 +101,15 @@ def preprocess(path):
                 l = b"#define INT_MAX 2147483647\n"
 
             # ZSTDLIB_API may not be defined if we dropped zstd.h. It isn't
-            # important so just filter it out.
-            if l.startswith(b"ZSTDLIB_API"):
-                l = l[len(b"ZSTDLIB_API ") :]
+            # important so just filter it out. Ditto for ZSTDLIB_STATIC_API and
+            # ZDICTLIB_STATIC_API.
+            for prefix in (
+                b"ZSTDLIB_API",
+                b"ZSTDLIB_STATIC_API",
+                b"ZDICTLIB_STATIC_API",
+            ):
+                if l.startswith(prefix):
+                    l = l[len(prefix) :]
 
             lines.append(l)
 
@@ -148,6 +119,11 @@ def preprocess(path):
 
     try:
         env = dict(os.environ)
+        # cffi attempts to decode source as ascii. And the preprocessor
+        # may insert non-ascii for some annotations. So try to force
+        # ascii output via LC_ALL.
+        env["LC_ALL"] = "C"
+
         if getattr(compiler, "_paths", None):
             env["PATH"] = compiler._paths
         process = subprocess.Popen(
@@ -170,9 +146,11 @@ def normalize_output(output):
         if line.startswith(b'__attribute__ ((visibility ("default"))) '):
             line = line[len(b'__attribute__ ((visibility ("default"))) ') :]
 
-        if line.startswith(b"__attribute__((deprecated("):
+        if line.startswith(b"__attribute__((deprecated"):
             continue
         elif b"__declspec(deprecated(" in line:
+            continue
+        elif line.startswith(b"__attribute__((__unused__))"):
             continue
 
         lines.append(line)
@@ -187,10 +165,11 @@ ffi = cffi.FFI()
 # when cffi uses the function. Since we statically link against zstd, even
 # if we use the deprecated functions it shouldn't be a huge problem.
 ffi.set_source(
-    "_zstd_cffi",
+    "zstandard._cffi",
     """
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 #define ZSTD_STATIC_LINKING_ONLY
+#define ZSTD_DISABLE_DEPRECATE_WARNINGS
 #include <zstd.h>
 #define ZDICT_STATIC_LINKING_ONLY
 #define ZDICT_DISABLE_DEPRECATE_WARNINGS
@@ -198,7 +177,6 @@ ffi.set_source(
 """,
     sources=SOURCES,
     include_dirs=INCLUDE_DIRS,
-    extra_compile_args=["-DZSTD_MULTITHREAD"],
 )
 
 DEFINE = re.compile(b"^\\#define ([a-zA-Z0-9_]+) ")

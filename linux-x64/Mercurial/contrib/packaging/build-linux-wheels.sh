@@ -1,34 +1,45 @@
 #!/bin/bash
-# This file is directly inspired by
-# https://github.com/pypa/python-manylinux-demo/blob/master/travis/build-wheels.sh
+
+# Intended to run within docker using image:
+#
+#  registry.heptapod.net/mercurial/ci-images/core-wheel-x86_64-c:v3.0
+#
+# we might want to factor most of this with the associated mercurial-core CI
+# definition. (i.e. move this script into a place where the CI can directly call it for its purpose)
+
 set -e -x
 
-PYTHON_TARGETS=$(ls -d /opt/python/cp27*/bin)
+PYTHON_TARGETS="cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313"
 
-# Create an user for the tests
-useradd hgbuilder
+# We need to copy the repository to ensure:
+# (1) we don't wrongly write roots files in the repository (or any other wrong
+#     users)
+# (2) we don't reuse pre-compiled extension built outside for manylinux and
+#     therefor not compatible.
+cp -r /src/ /tmp/src/
+cd /tmp/src/
+# clear potentially cached artifact from the host
+# (we could narrow this purge probably)
+hg purge \
+    --ignored \
+    --no-confirm
 
-# Bypass uid/gid problems
-cp -R /src /io && chown -R hgbuilder:hgbuilder /io
 
-# Compile wheels for Python 2.X
-for PYBIN in $PYTHON_TARGETS; do
-    "${PYBIN}/pip" wheel /io/ -w wheelhouse/
+if [ ! -e /src/dist/ ]; then
+    mkdir -p /src/dist
+    chown `stat /src/ -c %u:%g` /src/dist/
+fi
+
+for py in $PYTHON_TARGETS; do
+    echo 'build wheel for' $py
+    # cleanup any previous wheel
+    tmp_wd="/tmp/wheels/$py/repaired"
+    rm -rf $tmp_wd
+    mkdir -p $tmp_wd
+    # build a new wheel
+    contrib/build-one-linux-wheel.sh $py $tmp_wd
+    # fix the owner back to the repository owner
+    chown `stat /src/ -c %u:%g` $tmp_wd/*.whl
+    mv $tmp_wd/*.whl /src/dist/
 done
 
-# Bundle external shared libraries into the wheels with
-# auditwheel (https://github.com/pypa/auditwheel) repair.
-# It also fix the ABI tag on the wheel making it pip installable.
-for whl in wheelhouse/*.whl; do
-    auditwheel repair "$whl" -w /src/wheelhouse/
-done
-
-# Install packages and run the tests for all Python versions
-cd /io/tests/
-
-for PYBIN in $PYTHON_TARGETS; do
-    # Install mercurial wheel as root
-    "${PYBIN}/pip" install mercurial --no-index -f /src/wheelhouse
-    # But run tests as hgbuilder user (non-root)
-    su hgbuilder -c "\"${PYBIN}/python\" /io/tests/run-tests.py --with-hg=\"${PYBIN}/hg\" --blacklist=/io/contrib/packaging/linux-wheel-centos5-blacklist"
-done

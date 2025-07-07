@@ -25,7 +25,7 @@ DISTROS = {
 }
 
 INSTALL_PYTHONS = r'''
-PYENV3_VERSIONS="3.5.10 3.6.13 3.7.10 3.8.10 3.9.5 pypy3.5-7.0.0 pypy3.6-7.3.3 pypy3.7-7.3.3"
+PYENV3_VERSIONS="3.8.10 3.9.5 pypy3.5-7.0.0 pypy3.6-7.3.3 pypy3.7-7.3.3"
 
 git clone https://github.com/pyenv/pyenv.git /hgdev/pyenv
 pushd /hgdev/pyenv
@@ -585,7 +585,7 @@ def run_tests(ssh_client, python_version, test_flags=None):
     else:
         python = '/hgdev/pyenv/shims/python%s' % python_version
 
-    test_flags = ' '.join(shlex.quote(a) for a in test_flags)
+    test_flags = shlex.join(test_flags)
 
     command = (
         '/bin/sh -c "export TMPDIR=/hgwork/tmp; '

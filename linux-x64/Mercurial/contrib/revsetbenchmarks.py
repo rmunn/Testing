@@ -191,7 +191,7 @@ def formatfactor(factor):
 
 def formattiming(value):
     """format a value to strictly 8 char, dropping some precision if needed"""
-    if value < 10 ** 7:
+    if value < 10**7:
         return ('%.6f' % value)[:8]
     else:
         # value is HUGE very unlikely to happen (4+ month run)
@@ -371,7 +371,6 @@ print()
 print()
 
 for ridx, rset in enumerate(revsets):
-
     print("revset #%i: %s" % (ridx, rset))
     printheader(variants, len(results), verbose=options.verbose, relative=True)
     ref = None

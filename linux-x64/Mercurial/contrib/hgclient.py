@@ -21,7 +21,6 @@ if sys.version_info[0] >= 3:
         pargs = [re.sub(br'''\bb(['"])''', br'\1', b'%s' % a) for a in args]
         stdout.write(b' '.join(pargs) + b'\n')
 
-
 else:
     import cStringIO
 

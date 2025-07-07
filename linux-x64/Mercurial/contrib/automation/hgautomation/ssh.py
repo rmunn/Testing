@@ -46,7 +46,7 @@ def wait_for_ssh(hostname, port, timeout=60, username=None, key_filename=None):
                 )
 
                 return client
-            except socket.error:
+            except OSError:
                 pass
             except paramiko.AuthenticationException:
                 raise

@@ -332,7 +332,7 @@ def ensure_key_pairs(state_path: pathlib.Path, ec2resource, prefix='hg-'):
         pub_full = key_path / f
         priv_full = key_path / ('keypair-%s' % name)
 
-        with open(pub_full, 'r', encoding='ascii') as fh:
+        with open(pub_full, encoding='ascii') as fh:
             data = fh.read()
 
         if not data.startswith('ssh-rsa '):

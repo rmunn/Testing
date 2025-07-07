@@ -13,7 +13,8 @@ RUN yum install -y \
 	make \
 	python3-devel \
 	python3-docutils \
-	rpm-build
+	rpm-build \
+	which
 
 # For creating repo meta data
 RUN yum install -y createrepo

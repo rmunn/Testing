@@ -1,9 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 set -u
+set -o pipefail
 
-cd `hg root`
+cd "$(hg root)"
+
+printf "pytype version: "
+pytype --version
 
 # Many of the individual files that are excluded here confuse pytype
 # because they do a mix of Python 2 and Python 3 things
@@ -26,7 +30,6 @@ cd `hg root`
 # hgext/githelp.py              # [attribute-error] [wrong-arg-types]
 # hgext/hgk.py                  # [attribute-error]
 # hgext/histedit.py             # [attribute-error], [wrong-arg-types]
-# hgext/infinitepush            # using bytes for str literal; scheduled for removal
 # hgext/keyword.py              # [attribute-error]
 # hgext/largefiles/storefactory.py  # [attribute-error]
 # hgext/lfs/__init__.py         # [attribute-error]
@@ -39,10 +42,8 @@ cd `hg root`
 # hgext/remotefilelog/fileserverclient.py  # [attribute-error]
 # hgext/remotefilelog/shallowbundle.py     # [attribute-error]
 # hgext/remotefilelog/remotefilectx.py  # [module-attr] (This is an actual bug)
-# hgext/sqlitestore.py          # [attribute-error]
 # hgext/zeroconf/__init__.py    # bytes vs str; tests fail on macOS
 #
-# mercurial/bundlerepo.py       # no vfs and ui attrs on bundlerepo
 # mercurial/context.py          # many [attribute-error]
 # mercurial/crecord.py          # tons of [attribute-error], [module-attr]
 # mercurial/debugcommands.py    # [wrong-arg-types]
@@ -52,19 +53,12 @@ cd `hg root`
 # mercurial/hgweb/server.py     # [attribute-error], [name-error], [module-attr]
 # mercurial/hgweb/wsgicgi.py    # confused values in os.environ
 # mercurial/httppeer.py         # [attribute-error], [wrong-arg-types]
-# mercurial/interfaces          # No attribute 'capabilities' on peer [attribute-error]
 # mercurial/keepalive.py        # [attribute-error]
 # mercurial/localrepo.py        # [attribute-error]
-# mercurial/manifest.py         # [unsupported-operands], [wrong-arg-types]
 # mercurial/minirst.py          # [unsupported-operands], [attribute-error]
-# mercurial/pure/osutil.py      # [invalid-typevar], [not-callable]
-# mercurial/pure/parsers.py     # [attribute-error]
 # mercurial/repoview.py         # [attribute-error]
 # mercurial/testing/storage.py  # tons of [attribute-error]
-# mercurial/unionrepo.py        # ui, svfs, unfiltered [attribute-error]
 # mercurial/win32.py            # [not-callable]
-# mercurial/wireprotoframing.py # [unsupported-operands], [attribute-error], [import-error]
-# mercurial/wireprotov1peer.py  # [attribute-error]
 # mercurial/wireprotov1server.py  # BUG?: BundleValueError handler accesses subclass's attrs
 
 # TODO: use --no-cache on test server?  Caching the files locally helps during
@@ -72,7 +66,14 @@ cd `hg root`
 
 # TODO: include hgext and hgext3rd
 
-pytype -V 3.7 --keep-going --jobs auto \
+# use ts to produce some timing if available
+if ! command -v ts; then
+    ts() {
+        cat
+    }
+fi
+
+pytype --keep-going --jobs auto \
     doc/check-seclevel.py hgdemandimport hgext mercurial \
     -x hgext/absorb.py \
     -x hgext/bugzilla.py \
@@ -88,7 +89,6 @@ pytype -V 3.7 --keep-going --jobs auto \
     -x hgext/githelp.py \
     -x hgext/hgk.py \
     -x hgext/histedit.py \
-    -x hgext/infinitepush \
     -x hgext/keyword.py \
     -x hgext/largefiles/storefactory.py \
     -x hgext/lfs/__init__.py \
@@ -101,9 +101,7 @@ pytype -V 3.7 --keep-going --jobs auto \
     -x hgext/remotefilelog/fileserverclient.py \
     -x hgext/remotefilelog/remotefilectx.py \
     -x hgext/remotefilelog/shallowbundle.py \
-    -x hgext/sqlitestore.py \
     -x hgext/zeroconf/__init__.py \
-    -x mercurial/bundlerepo.py \
     -x mercurial/context.py \
     -x mercurial/crecord.py \
     -x mercurial/debugcommands.py \
@@ -113,21 +111,17 @@ pytype -V 3.7 --keep-going --jobs auto \
     -x mercurial/hgweb/server.py \
     -x mercurial/hgweb/wsgicgi.py \
     -x mercurial/httppeer.py \
-    -x mercurial/interfaces \
     -x mercurial/keepalive.py \
     -x mercurial/localrepo.py \
-    -x mercurial/manifest.py \
     -x mercurial/minirst.py \
-    -x mercurial/pure/osutil.py \
-    -x mercurial/pure/parsers.py \
     -x mercurial/repoview.py \
     -x mercurial/testing/storage.py \
     -x mercurial/thirdparty \
-    -x mercurial/unionrepo.py \
     -x mercurial/win32.py \
-    -x mercurial/wireprotoframing.py \
-    -x mercurial/wireprotov1peer.py \
-    -x mercurial/wireprotov1server.py
+    -x mercurial/wireprotov1server.py \
+    | ts -i "(%.s)" | ts -s "%.s"
 
-echo 'pytype crashed while generating the following type stubs:'
-find .pytype/pyi -name '*.pyi' | xargs grep -l '# Caught error' | sort
+if find .pytype/pyi -name '*.pyi' | xargs grep -ql '# Caught error'; then
+    echo 'pytype crashed while generating the following type stubs:'
+    find .pytype/pyi -name '*.pyi' | xargs grep -l '# Caught error' | sort
+fi

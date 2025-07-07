@@ -40,7 +40,6 @@ from mercurial import (
     extensions,
     hg,
     ui as uimod,
-    util,
 )
 
 basedir = os.path.abspath(
@@ -55,10 +54,8 @@ reposnames = [
 if not reposnames:
     raise ValueError("No repositories found in $REPO_DIR")
 outputre = re.compile(
-    (
-        r'! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys '
-        r'\d+.\d+ \(best of \d+\)'
-    )
+    r'! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys '
+    r'\d+.\d+ \(best of \d+\)'
 )
 
 
@@ -66,7 +63,7 @@ def runperfcommand(reponame, command, *args, **kwargs):
     os.environ["HGRCPATH"] = os.environ.get("ASVHGRCPATH", "")
     # for "historical portability"
     # ui.load() has been available since d83ca85
-    if util.safehasattr(uimod.ui, "load"):
+    if hasattr(uimod.ui, "load"):
         ui = uimod.ui.load()
     else:
         ui = uimod.ui()
@@ -80,7 +77,7 @@ def runperfcommand(reponame, command, *args, **kwargs):
     output = ui.popbuffer()
     match = outputre.search(output)
     if not match:
-        raise ValueError("Invalid output {}".format(output))
+        raise ValueError(f"Invalid output {output}")
     return float(match.group(1))
 
 

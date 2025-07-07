@@ -76,7 +76,7 @@ newfile = {'new fi', 'rename', 'copy f', 'copy t'}
 
 
 def zerodict():
-    return collections.defaultdict(lambda: 0)
+    return collections.defaultdict(int)
 
 
 def roundto(x, k):
@@ -326,8 +326,8 @@ def synthesize(ui, repo, descpath, **opts):
 
     dictfile = opts.get('dict') or '/usr/share/dict/words'
     try:
-        fp = open(dictfile, 'rU')
-    except IOError as err:
+        fp = open(dictfile)
+    except OSError as err:
         raise error.Abort('%s: %s' % (dictfile, err.strerror))
     words = fp.read().splitlines()
     fp.close()

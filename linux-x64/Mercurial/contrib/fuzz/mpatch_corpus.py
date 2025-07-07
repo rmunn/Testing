@@ -25,7 +25,6 @@ if sys.version_info[0] < 3:
             """Py2 calls __repr__ for `bytes(foo)`, forward to __bytes__"""
             return self.__bytes__()
 
-
 else:
 
     class py2reprhack:

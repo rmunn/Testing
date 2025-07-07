@@ -15,7 +15,7 @@
 # the actual versions that are installed, see the comment above where we set
 # DEB_HG_PYTHON_VERSIONS below. If you choose to set `DEB_HG_PYTHON_VERSIONS`
 # yourself, set it to a space-separated string of python version numbers, like:
-#   DEB_HG_PYTHON_VERSIONS="3.7 3.8" make deb
+#   DEB_HG_PYTHON_VERSIONS="3.8" make deb
 DEB_HG_MULTI_VERSION?=0
 
 # Set to 1 to make /usr/bin/hg a symlink to chg, and move hg to

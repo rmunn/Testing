@@ -182,7 +182,7 @@ def read_version_py(source_dir):
     p = source_dir / 'mercurial' / '__version__.py'
 
     with p.open('r', encoding='utf-8') as fh:
-        m = re.search('version = b"([^"]+)"', fh.read(), re.MULTILINE)
+        m = re.search("version = '([^']+)'", fh.read(), re.MULTILINE)
 
         if not m:
             raise Exception('could not parse %s' % p)

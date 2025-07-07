@@ -3,21 +3,16 @@
 %define withpython %{nil}
 
 %global pythonexe python3
-%global pythondocutils python3-docutils
 
 %if "%{?withpython}"
-
 %global pythonver %{withpython}
 %global pythonname Python-%{withpython}
-%global docutilsname docutils-0.14
-%global docutilsmd5 c53768d63db3873b7d452833553469de
 %global pythonhg python-hg
 %global hgpyprefix /opt/%{pythonhg}
 # byte compilation will fail on some some Python /test/ files
 %global _python_bytecompile_errors_terminate_build 0
 
 %else
-
 %global pythonver %(%{pythonexe} -c 'import sys;print(".".join(map(str, sys.version_info[:2])))')
 
 %endif
@@ -33,7 +28,6 @@ URL: https://mercurial-scm.org/
 Source0: %{name}-%{version}-%{release}.tar.gz
 %if "%{?withpython}"
 Source1: %{pythonname}.tgz
-Source2: %{docutilsname}.tar.gz
 %endif
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
@@ -41,7 +35,7 @@ BuildRequires: make, gcc, gettext
 %if "%{?withpython}"
 BuildRequires: readline-devel, openssl-devel, ncurses-devel, zlib-devel, bzip2-devel
 %else
-BuildRequires: %{pythonexe} >= %{pythonver}, %{pythonexe}-devel, %{pythondocutils}
+BuildRequires: %{pythonexe} >= %{pythonver}, %{pythonexe}-devel, python3-docutils
 Requires: %{pythonexe} >= %{pythonver}
 %endif
 # The hgk extension uses the wish tcl interpreter, but we don't enforce it
@@ -54,9 +48,7 @@ for efficient handling of very large distributed projects.
 %prep
 
 %if "%{?withpython}"
-%setup -q -n mercurial-%{version}-%{release} -a1 -a2
-# despite the comments in cgi.py, we do this to prevent rpmdeps from picking /usr/local/bin/python up
-sed -i '1c#! /usr/bin/env %{pythonexe}' %{pythonname}/Lib/cgi.py
+%setup -q -n mercurial-%{version}-%{release} -a1
 %else
 %setup -q -n mercurial-%{version}-%{release}
 %endif
@@ -68,30 +60,35 @@ export HGPYTHON3=1
 %if "%{?withpython}"
 
 PYPATH=$PWD/%{pythonname}
+PYTHON_FULLPATH=$PYPATH/python3
 cd $PYPATH
-./configure --prefix=%{hgpyprefix}
+./configure --prefix=%{hgpyprefix} --with-ensurepip=install --enable-optimizations --with-lto
 make all %{?_smp_mflags}
-cd -
-
-cd %{docutilsname}
-LD_LIBRARY_PATH=$PYPATH $PYPATH/python setup.py build
+# add a symlink and only refer to python3 from here on
+ln -s python python3
+# remove python reference
+sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python3|' Lib/encodings/rot_13.py
+$PYTHON_FULLPATH -m ensurepip --default-pip
+$PYTHON_FULLPATH -m pip install setuptools setuptools-scm docutils
 cd -
 
 # verify Python environment
-LD_LIBRARY_PATH=$PYPATH PYTHONPATH=$PWD/%{docutilsname} $PYPATH/python -c 'import sys, zlib, bz2, ssl, curses, readline'
+LD_LIBRARY_PATH=$PYPATH $PYTHON_FULLPATH -c 'import sys, zlib, bz2, ssl, curses, readline'
+LD_LIBRARY_PATH=$PYPATH $PYTHON_FULLPATH -c "import ssl; print(ssl.HAS_TLSv1_2)"
+LD_LIBRARY_PATH=$PYPATH $PYTHON_FULLPATH -c "import docutils"
 
 # set environment for make
 export PATH=$PYPATH:$PATH
 export LD_LIBRARY_PATH=$PYPATH
 export CFLAGS="-L $PYPATH"
-export PYTHONPATH=$PWD/%{docutilsname}
-
+%else
+PYTHON_FULLPATH=$(which python3)
+$PYTHON_FULLPATH -m pip install pip setuptools setuptools-scm packaging --upgrade
 %endif
 
-make all PYTHON=%{pythonexe}
 make -C contrib/chg
 
-sed -i -e '1s|#!/usr/bin/env python$|#!/usr/bin/env %{pythonexe}|' contrib/hg-ssh
+sed -i -e '1s|#!/usr/bin/env python3$|#!/usr/bin/env %{pythonexe}|' contrib/hg-ssh
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -101,24 +98,21 @@ export HGPYTHON3=1
 %if "%{?withpython}"
 
 PYPATH=$PWD/%{pythonname}
+PYTHON_FULLPATH=$PYPATH/python3
 cd $PYPATH
 make install DESTDIR=$RPM_BUILD_ROOT
 # these .a are not necessary and they are readonly and strip fails - kill them!
 rm -f %{buildroot}%{hgpyprefix}/lib/{,python2.*/config}/libpython2.*.a
 cd -
 
-cd %{docutilsname}
-LD_LIBRARY_PATH=$PYPATH $PYPATH/python setup.py install --root="$RPM_BUILD_ROOT"
-cd -
-
-PATH=$PYPATH:$PATH LD_LIBRARY_PATH=$PYPATH make install PYTHON=%{pythonexe} DESTDIR=$RPM_BUILD_ROOT PREFIX=%{hgpyprefix} MANDIR=%{_mandir} PURE="--rust"
+PATH=$PYPATH:$PATH LD_LIBRARY_PATH=$PYPATH make install PYTHON=$PYTHON_FULLPATH DESTDIR=$RPM_BUILD_ROOT PIP_PREFIX=$RPM_BUILD_ROOT/%{hgpyprefix} PREFIX=%{hgpyprefix} MANDIR=%{_mandir} PURE="--rust"
 mkdir -p $RPM_BUILD_ROOT%{_bindir}
 ( cd $RPM_BUILD_ROOT%{_bindir}/ && ln -s ../..%{hgpyprefix}/bin/hg . )
-( cd $RPM_BUILD_ROOT%{_bindir}/ && ln -s ../..%{hgpyprefix}/bin/python2.? %{pythonhg} )
+pathfix.py -n -i %{hgpyprefix}/bin/python3 $(readlink -f $RPM_BUILD_ROOT%{_bindir}/hg)
 
 %else
-
-make install PYTHON=%{pythonexe} DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir} PURE="--rust"
+PYTHON_FULLPATH=$(which python3)
+make install PYTHON=$PYTHON_FULLPATH DESTDIR=$RPM_BUILD_ROOT PREFIX=$RPM_BUILD_ROOT/%{_prefix} MANDIR=%{_mandir} PURE="--rust"
 
 %endif
 
@@ -140,12 +134,6 @@ rm -rf $RPM_BUILD_ROOT
 %doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html *.cgi contrib/*.fcgi contrib/*.wsgi
 %doc %attr(644,root,root) %{_mandir}/man?/hg*
 %doc %attr(644,root,root) contrib/*.svg
-%dir %{_datadir}/bash-completion/
-%dir %{_datadir}/bash-completion/completions
-%{_datadir}/bash-completion/completions/hg
-%dir %{_datadir}/zsh/
-%dir %{_datadir}/zsh/site-functions/
-%{_datadir}/zsh/site-functions/_hg
 %dir %{_datadir}/emacs/site-lisp/
 %{_datadir}/emacs/site-lisp/mercurial.el
 %{_datadir}/emacs/site-lisp/mq.el
@@ -156,12 +144,13 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_sysconfdir}/mercurial
 %dir %{_sysconfdir}/mercurial/hgrc.d
 %if "%{?withpython}"
-%{_bindir}/%{pythonhg}
 %{hgpyprefix}
 %else
-%{_libdir}/python%{pythonver}/site-packages/%{name}-*-py%{pythonver}.egg-info
+%{_libdir}/python%{pythonver}/site-packages/mercurial-*.dist-info/
 %{_libdir}/python%{pythonver}/site-packages/%{name}
 %{_libdir}/python%{pythonver}/site-packages/hgext
 %{_libdir}/python%{pythonver}/site-packages/hgext3rd
 %{_libdir}/python%{pythonver}/site-packages/hgdemandimport
+/usr/share/bash-completion/completions/hg
+/usr/share/zsh/site-functions/_hg
 %endif

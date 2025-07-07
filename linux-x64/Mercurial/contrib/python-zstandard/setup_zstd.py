@@ -5,112 +5,29 @@
 # of the BSD license. See the LICENSE file for details.
 
 import distutils.ccompiler
+import distutils.command.build_ext
+import distutils.extension
+import distutils.util
+import glob
 import os
+import shutil
+import subprocess
+import sys
 
-from distutils.extension import Extension
-
-
-zstd_sources = [
-    "zstd/%s" % p
-    for p in (
-        "common/debug.c",
-        "common/entropy_common.c",
-        "common/error_private.c",
-        "common/fse_decompress.c",
-        "common/pool.c",
-        "common/threading.c",
-        "common/xxhash.c",
-        "common/zstd_common.c",
-        "compress/fse_compress.c",
-        "compress/hist.c",
-        "compress/huf_compress.c",
-        "compress/zstd_compress_literals.c",
-        "compress/zstd_compress_sequences.c",
-        "compress/zstd_compress.c",
-        "compress/zstd_double_fast.c",
-        "compress/zstd_fast.c",
-        "compress/zstd_lazy.c",
-        "compress/zstd_ldm.c",
-        "compress/zstd_opt.c",
-        "compress/zstdmt_compress.c",
-        "decompress/huf_decompress.c",
-        "decompress/zstd_ddict.c",
-        "decompress/zstd_decompress.c",
-        "decompress/zstd_decompress_block.c",
-        "dictBuilder/cover.c",
-        "dictBuilder/divsufsort.c",
-        "dictBuilder/fastcover.c",
-        "dictBuilder/zdict.c",
-    )
-]
-
-zstd_sources_legacy = [
-    "zstd/%s" % p
-    for p in (
-        "deprecated/zbuff_common.c",
-        "deprecated/zbuff_compress.c",
-        "deprecated/zbuff_decompress.c",
-        "legacy/zstd_v01.c",
-        "legacy/zstd_v02.c",
-        "legacy/zstd_v03.c",
-        "legacy/zstd_v04.c",
-        "legacy/zstd_v05.c",
-        "legacy/zstd_v06.c",
-        "legacy/zstd_v07.c",
-    )
-]
-
-zstd_includes = [
-    "zstd",
-    "zstd/common",
-    "zstd/compress",
-    "zstd/decompress",
-    "zstd/dictBuilder",
-]
-
-zstd_includes_legacy = [
-    "zstd/deprecated",
-    "zstd/legacy",
-]
 
 ext_includes = [
     "c-ext",
-    "zstd/common",
 ]
 
 ext_sources = [
-    "zstd/common/error_private.c",
-    "zstd/common/pool.c",
-    "zstd/common/threading.c",
-    "zstd/common/zstd_common.c",
-    "zstd.c",
-    "c-ext/bufferutil.c",
-    "c-ext/compressiondict.c",
-    "c-ext/compressobj.c",
-    "c-ext/compressor.c",
-    "c-ext/compressoriterator.c",
-    "c-ext/compressionchunker.c",
-    "c-ext/compressionparams.c",
-    "c-ext/compressionreader.c",
-    "c-ext/compressionwriter.c",
-    "c-ext/constants.c",
-    "c-ext/decompressobj.c",
-    "c-ext/decompressor.c",
-    "c-ext/decompressoriterator.c",
-    "c-ext/decompressionreader.c",
-    "c-ext/decompressionwriter.c",
-    "c-ext/frameparams.c",
-]
-
-zstd_depends = [
-    "c-ext/python-zstandard.h",
+    "c-ext/backend_c.c",
 ]
 
 
 def get_c_extension(
     support_legacy=False,
     system_zstd=False,
-    name="zstd",
+    name="zstandard.backend_c",
     warnings_as_errors=False,
     root=None,
 ):
@@ -134,35 +51,13 @@ def get_c_extension(
     actual_root = os.path.abspath(os.path.dirname(__file__))
     root = root or actual_root
 
-    sources = set([os.path.join(actual_root, p) for p in ext_sources])
+    sources = sorted(set([os.path.join(actual_root, p) for p in ext_sources]))
+    local_include_dirs = [os.path.join(actual_root, d) for d in ext_includes]
+
     if not system_zstd:
-        sources.update([os.path.join(actual_root, p) for p in zstd_sources])
-        if support_legacy:
-            sources.update(
-                [os.path.join(actual_root, p) for p in zstd_sources_legacy]
-            )
-    sources = list(sources)
+        local_include_dirs.append(os.path.join(actual_root, "zstd"))
 
-    include_dirs = set([os.path.join(actual_root, d) for d in ext_includes])
-    if not system_zstd:
-        from distutils import sysconfig
-        from shlex import quote
-
-        includes = []
-        for incdir in [os.path.join(actual_root, d) for d in zstd_includes]:
-            includes.append('-I' + quote(incdir))
-            include_dirs.add(incdir)
-        config_vars = sysconfig.get_config_vars()
-        config_vars['CFLAGS'] = ' '.join(
-            includes + [config_vars.get('CFLAGS', '')]
-        )
-        if support_legacy:
-            include_dirs.update(
-                [os.path.join(actual_root, d) for d in zstd_includes_legacy]
-            )
-    include_dirs = list(include_dirs)
-
-    depends = [os.path.join(actual_root, p) for p in zstd_depends]
+    depends = sorted(glob.glob(os.path.join(actual_root, "c-ext", "*")))
 
     compiler = distutils.ccompiler.new_compiler()
 
@@ -179,12 +74,15 @@ def get_c_extension(
     else:
         raise Exception("unhandled compiler type: %s" % compiler.compiler_type)
 
-    extra_args = ["-DZSTD_MULTITHREAD"]
+    extra_args = []
 
-    if not system_zstd:
-        extra_args.append("-DZSTDLIB_VISIBILITY=")
-        extra_args.append("-DZDICTLIB_VISIBILITY=")
-        extra_args.append("-DZSTDERRORLIB_VISIBILITY=")
+    if system_zstd:
+        extra_args.append("-DZSTD_MULTITHREAD")
+    else:
+        extra_args.append("-DZSTD_SINGLE_FILE")
+        extra_args.append("-DZSTDLIB_VISIBLE=")
+        extra_args.append("-DZDICTLIB_VISIBLE=")
+        extra_args.append("-DZSTDERRORLIB_VISIBLE=")
 
         if compiler_type == "unix":
             extra_args.append("-fvisibility=hidden")
@@ -204,15 +102,86 @@ def get_c_extension(
 
     # Python 3.7 doesn't like absolute paths. So normalize to relative.
     sources = [os.path.relpath(p, root) for p in sources]
-    include_dirs = [os.path.relpath(p, root) for p in include_dirs]
+    local_include_dirs = [os.path.relpath(p, root) for p in local_include_dirs]
     depends = [os.path.relpath(p, root) for p in depends]
 
+    if "ZSTD_EXTRA_COMPILER_ARGS" in os.environ:
+        extra_args.extend(
+            distutils.util.split_quoted(os.environ["ZSTD_EXTRA_COMPILER_ARGS"])
+        )
+
     # TODO compile with optimizations.
-    return Extension(
+    return distutils.extension.Extension(
         name,
         sources,
-        include_dirs=include_dirs,
+        include_dirs=local_include_dirs,
         depends=depends,
         extra_compile_args=extra_args,
         libraries=libraries,
     )
+
+
+class RustExtension(distutils.extension.Extension):
+    def __init__(self, name, root):
+        super().__init__(name, [])
+
+        self.root = root
+
+        self.depends.extend(
+            [
+                os.path.join(root, "Cargo.toml"),
+                os.path.join(root, "rust-ext", "src", "lib.rs"),
+            ]
+        )
+
+    def build(self, build_dir, get_ext_path_fn):
+        env = os.environ.copy()
+        env["PYTHON_SYS_EXECUTABLE"] = sys.executable
+        # Needed for try_reserve()
+        env["RUSTC_BOOTSTRAP"] = "1"
+
+        args = [
+            "cargo",
+            "build",
+            "--release",
+            "--target-dir",
+            str(build_dir),
+        ]
+
+        subprocess.run(args, env=env, cwd=self.root, check=True)
+
+        dest_path = get_ext_path_fn(self.name)
+
+        libname = self.name.split(".")[-1]
+
+        if os.name == "nt":
+            rust_lib_filename = "%s.dll" % libname
+        elif sys.platform == "darwin":
+            rust_lib_filename = "lib%s.dylib" % libname
+        else:
+            rust_lib_filename = "lib%s.so" % libname
+
+        rust_lib = os.path.join(build_dir, "release", rust_lib_filename)
+        os.makedirs(os.path.dirname(rust_lib), exist_ok=True)
+
+        shutil.copy2(rust_lib, dest_path)
+
+
+class RustBuildExt(distutils.command.build_ext.build_ext):
+    def build_extension(self, ext):
+        if isinstance(ext, RustExtension):
+            ext.build(
+                build_dir=os.path.abspath(self.build_temp),
+                get_ext_path_fn=self.get_ext_fullpath,
+            )
+        else:
+            super().build_extension(ext)
+
+
+def get_rust_extension(
+    root=None,
+):
+    actual_root = os.path.abspath(os.path.dirname(__file__))
+    root = root or actual_root
+
+    return RustExtension("zstandard.backend_rust", root)

@@ -16,7 +16,7 @@ Building the WiX installer requires a Windows machine.
 
 The following system dependencies must be installed:
 
-* Python 3.6+ (to run the ``packaging.py`` script)
+* Python 3.8+ (to run the ``packaging.py`` script)
 
 Building
 ========

@@ -46,8 +46,8 @@ p1()
 # Used in revision c1546d7400ef
 min(0::)
 # Used in revision 546fa6576815
-author(lmoscovicz) or author(olivia)
-author(olivia) or author(lmoscovicz)
+author(lmoscovicz) or author("pierre-yves")
+author("pierre-yves") or author(lmoscovicz)
 # Used in revision 9bfe68357c01
 public() and id("d82e2223f132")
 # Used in revision ba89f7b542c9
@@ -100,7 +100,7 @@ draft()
 draft() and ::tip
 ::tip and draft()
 author(lmoscovicz)
-author(olivia)
+author("pierre-yves")
 ::p1(p1(tip))::
 public()
 :10000 and public()
@@ -130,7 +130,7 @@ roots((:42) + (tip~42:))
 head()
 head() - public()
 draft() and head()
-head() and author("olivia")
+head() and author("pierre-yves")
 
 # testing the mutable phases set
 draft()

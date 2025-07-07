@@ -2,18 +2,31 @@ import unittest
 
 import zstandard as zstd
 
-from .common import (
-    make_cffi,
-    TestCase,
-)
 
-
-@make_cffi
-class TestModuleAttributes(TestCase):
+class TestModuleAttributes(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(zstd.ZSTD_VERSION, (1, 4, 4))
+        self.assertEqual(zstd.ZSTD_VERSION, (1, 5, 6))
 
-        self.assertEqual(zstd.__version__, "0.13.0")
+        self.assertEqual(zstd.__version__, "0.23.0")
+
+    def test_features(self):
+        self.assertIsInstance(zstd.backend_features, set)
+
+        expected = {
+            "cext": {
+                "buffer_types",
+                "multi_compress_to_buffer",
+                "multi_decompress_to_buffer",
+            },
+            "cffi": set(),
+            "rust": {
+                "buffer_types",
+                "multi_compress_to_buffer",
+                "multi_decompress_to_buffer",
+            },
+        }[zstd.backend]
+
+        self.assertEqual(zstd.backend_features, expected)
 
     def test_constants(self):
         self.assertEqual(zstd.MAX_COMPRESSION_LEVEL, 22)
@@ -38,7 +51,6 @@ class TestModuleAttributes(TestCase):
             "CHAINLOG_MAX",
             "HASHLOG_MIN",
             "HASHLOG_MAX",
-            "HASHLOG3_MAX",
             "MINMATCH_MIN",
             "MINMATCH_MAX",
             "SEARCHLOG_MIN",

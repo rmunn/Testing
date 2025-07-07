@@ -1,16 +1,9 @@
-import sys
 import unittest
 
 import zstandard as zstd
 
-from .common import (
-    make_cffi,
-    TestCase,
-)
 
-
-@make_cffi
-class TestCompressionParameters(TestCase):
+class TestCompressionParameters(unittest.TestCase):
     def test_bounds(self):
         zstd.ZstdCompressionParameters(
             window_log=zstd.WINDOWLOG_MIN,
@@ -34,7 +27,7 @@ class TestCompressionParameters(TestCase):
 
     def test_from_level(self):
         p = zstd.ZstdCompressionParameters.from_level(1)
-        self.assertIsInstance(p, zstd.CompressionParameters)
+        self.assertIsInstance(p, zstd.ZstdCompressionParameters)
 
         self.assertEqual(p.window_log, 19)
 
@@ -57,7 +50,7 @@ class TestCompressionParameters(TestCase):
         self.assertEqual(p.search_log, 4)
         self.assertEqual(p.min_match, 5)
         self.assertEqual(p.target_length, 8)
-        self.assertEqual(p.compression_strategy, 1)
+        self.assertEqual(p.strategy, 1)
 
         p = zstd.ZstdCompressionParameters(compression_level=2)
         self.assertEqual(p.compression_level, 2)
@@ -71,7 +64,6 @@ class TestCompressionParameters(TestCase):
         self.assertEqual(p.threads, 2)
         self.assertEqual(p.job_size, 1048576)
         self.assertEqual(p.overlap_log, 6)
-        self.assertEqual(p.overlap_size_log, 6)
 
         p = zstd.ZstdCompressionParameters(compression_level=-1)
         self.assertEqual(p.compression_level, -1)
@@ -95,7 +87,6 @@ class TestCompressionParameters(TestCase):
         self.assertEqual(p.ldm_bucket_size_log, 7)
 
         p = zstd.ZstdCompressionParameters(ldm_hash_rate_log=8)
-        self.assertEqual(p.ldm_hash_every_log, 8)
         self.assertEqual(p.ldm_hash_rate_log, 8)
 
     def test_estimated_compression_context_size(self):
@@ -111,68 +102,32 @@ class TestCompressionParameters(TestCase):
 
         # 32-bit has slightly different values from 64-bit.
         self.assertAlmostEqual(
-            p.estimated_compression_context_size(), 1294464, delta=400
+            p.estimated_compression_context_size(), 1303304, delta=4000
         )
 
     def test_strategy(self):
-        with self.assertRaisesRegex(
-            ValueError, "cannot specify both compression_strategy"
-        ):
-            zstd.ZstdCompressionParameters(strategy=0, compression_strategy=0)
-
         p = zstd.ZstdCompressionParameters(strategy=2)
-        self.assertEqual(p.compression_strategy, 2)
+        self.assertEqual(p.strategy, 2)
 
         p = zstd.ZstdCompressionParameters(strategy=3)
-        self.assertEqual(p.compression_strategy, 3)
+        self.assertEqual(p.strategy, 3)
 
     def test_ldm_hash_rate_log(self):
-        with self.assertRaisesRegex(
-            ValueError, "cannot specify both ldm_hash_rate_log"
-        ):
-            zstd.ZstdCompressionParameters(
-                ldm_hash_rate_log=8, ldm_hash_every_log=4
-            )
-
         p = zstd.ZstdCompressionParameters(ldm_hash_rate_log=8)
-        self.assertEqual(p.ldm_hash_every_log, 8)
-
-        p = zstd.ZstdCompressionParameters(ldm_hash_every_log=16)
-        self.assertEqual(p.ldm_hash_every_log, 16)
+        self.assertEqual(p.ldm_hash_rate_log, 8)
 
     def test_overlap_log(self):
-        with self.assertRaisesRegex(
-            ValueError, "cannot specify both overlap_log"
-        ):
-            zstd.ZstdCompressionParameters(overlap_log=1, overlap_size_log=9)
-
         p = zstd.ZstdCompressionParameters(overlap_log=2)
         self.assertEqual(p.overlap_log, 2)
-        self.assertEqual(p.overlap_size_log, 2)
-
-        p = zstd.ZstdCompressionParameters(overlap_size_log=4)
-        self.assertEqual(p.overlap_log, 4)
-        self.assertEqual(p.overlap_size_log, 4)
 
 
-@make_cffi
-class TestFrameParameters(TestCase):
+class TestFrameParameters(unittest.TestCase):
     def test_invalid_type(self):
         with self.assertRaises(TypeError):
             zstd.get_frame_parameters(None)
 
-        # Python 3 doesn't appear to convert unicode to Py_buffer.
-        if sys.version_info[0] >= 3:
-            with self.assertRaises(TypeError):
-                zstd.get_frame_parameters(u"foobarbaz")
-        else:
-            # CPython will convert unicode to Py_buffer. But CFFI won't.
-            if zstd.backend == "cffi":
-                with self.assertRaises(TypeError):
-                    zstd.get_frame_parameters(u"foobarbaz")
-            else:
-                with self.assertRaises(zstd.ZstdError):
-                    zstd.get_frame_parameters(u"foobarbaz")
+        with self.assertRaises(TypeError):
+            zstd.get_frame_parameters("foobarbaz")
 
     def test_invalid_input_sizes(self):
         with self.assertRaisesRegex(

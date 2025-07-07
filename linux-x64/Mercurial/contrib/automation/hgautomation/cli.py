@@ -201,7 +201,6 @@ def run_tests_linux(
     with aws.temporary_linux_dev_instances(
         c, image, instance_type, ensure_extra_volume=ensure_extra_volume
     ) as insts:
-
         instance = insts[0]
 
         linux.prepare_exec_environment(
@@ -447,9 +446,6 @@ def get_parser():
         help='Python version to use',
         choices={
             'system3',
-            '3.5',
-            '3.6',
-            '3.7',
             '3.8',
             'pypy',
             'pypy3.5',
@@ -476,7 +472,7 @@ def get_parser():
     sp.add_argument(
         '--python-version',
         help='Python version to use',
-        choices={'3.5', '3.6', '3.7', '3.8', '3.9', '3.10'},
+        choices={'3.8', '3.9', '3.10'},
         default='3.9',
     )
     sp.add_argument(

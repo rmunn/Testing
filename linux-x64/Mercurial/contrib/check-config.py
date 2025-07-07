@@ -57,7 +57,6 @@ if sys.version_info[0] > 2:
             return b
         return b.decode('utf8')
 
-
 else:
     mkstr = lambda x: x
 

@@ -15,7 +15,7 @@ prints it to ``stderr`` on exit.
 def memusage(ui):
     """Report memory usage of the current process."""
     result = {'peak': 0, 'rss': 0}
-    with open('/proc/self/status', 'r') as status:
+    with open('/proc/self/status') as status:
         # This will only work on systems with a /proc file system
         # (like Linux).
         for line in status:

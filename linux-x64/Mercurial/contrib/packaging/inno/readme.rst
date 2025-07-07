@@ -8,7 +8,7 @@ The following system dependencies must be installed:
 * Inno Setup (http://jrsoftware.org/isdl.php) version 5.4 or newer.
   Be sure to install the optional Inno Setup Preprocessor feature,
   which is required.
-* Python 3.6+ (to run the ``packaging.py`` script)
+* Python 3.8+ (to run the ``packaging.py`` script)
 
 Building
 ========

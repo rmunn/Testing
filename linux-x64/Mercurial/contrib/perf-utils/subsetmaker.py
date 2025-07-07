@@ -83,7 +83,7 @@ def scratch(repo, subset, x):
 
     selected = set()
     heads = SortedSet()
-    children_count = collections.defaultdict(lambda: 0)
+    children_count = collections.defaultdict(int)
     parents = repo.changelog._uncheckedparentrevs
 
     baseset = revset.getset(repo, smartset.fullreposet(repo), x)
@@ -183,8 +183,8 @@ def antichain(repo, subset, x):
         selected.add(pick)
         undecided.remove(pick)
 
-        ancestors = set(p for p in parents(pick) if p in undecided)
-        descendants = set(c for c in children(pick) if c in undecided)
+        ancestors = {p for p in parents(pick) if p in undecided}
+        descendants = {c for c in children(pick) if c in undecided}
 
         while ancestors:
             current = ancestors.pop()

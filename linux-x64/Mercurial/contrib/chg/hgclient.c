@@ -7,6 +7,11 @@
  * GNU General Public License version 2 or any later version.
  */
 
+#if defined(__sun) && !defined(_XOPEN_SOURCE)
+/* msg_control is used */
+#define _XOPEN_SOURCE 600
+#endif
+
 #include <arpa/inet.h> /* for ntohl(), htonl() */
 #include <assert.h>
 #include <ctype.h>
@@ -25,6 +30,10 @@
 #include "hgclient.h"
 #include "procutil.h"
 #include "util.h"
+
+#ifndef O_DIRECTORY
+#define O_DIRECTORY O_RDONLY
+#endif
 
 enum {
 	CAP_GETENCODING = 0x0001,

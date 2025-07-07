@@ -7,7 +7,6 @@
 BUILD=1
 RPMBUILDDIR="$PWD/rpmbuild"
 PYTHONEXE=python3
-DOCUTILSPACKAGE=python3-docutils
 
 while [ "$1" ]; do
     case "$1" in
@@ -22,14 +21,9 @@ while [ "$1" ]; do
         ;;
     --withpython | --with-python)
         shift
-        PYTHONVER=2.7.16
-        PYTHONMD5=f1a2ace631068444831d01485466ece0
-        PYTHONEXE=python
-        ;;
-    --docutilspackage)
-        shift
-        DOCUTILSPACKAGE="$1"
-        shift
+        PYTHONVER=3.13.1
+        PYTHONMD5=6820ac52d77af870f795dabc64583234
+        PYTHONEXE=python3
         ;;
     --rpmbuilddir )
         shift
@@ -88,14 +82,6 @@ if [ "$PYTHONVER" ]; then
     fi
     ln -f $PYTHON_SRCFILE $RPMBUILDDIR/SOURCES/$PYTHON_SRCFILE
 
-    DOCUTILSVER=`sed -ne "s/^%global docutilsname docutils-//p" $specfile`
-    DOCUTILS_SRCFILE=docutils-$DOCUTILSVER.tar.gz
-    [ -f $DOCUTILS_SRCFILE ] || curl -Lo $DOCUTILS_SRCFILE http://downloads.sourceforge.net/project/docutils/docutils/$DOCUTILSVER/$DOCUTILS_SRCFILE
-    DOCUTILSMD5=`sed -ne "s/^%global docutilsmd5 //p" $specfile`
-    if [ "$DOCUTILSMD5" ]; then
-        echo "$DOCUTILSMD5 $DOCUTILS_SRCFILE" | md5sum -w -c
-    fi
-    ln -f $DOCUTILS_SRCFILE $RPMBUILDDIR/SOURCES/$DOCUTILS_SRCFILE
 )
 fi
 
@@ -154,9 +140,6 @@ fi
 
 sed -i \
     -e "s/^%define withpython.*$/%define withpython $RPMPYTHONVER/" \
-    $rpmspec
-sed -i \
-    -e "s/^%global pythondocutils.*$/%global pythondocutils $DOCUTILSPACKAGE/" \
     $rpmspec
 
 if [ "$BUILD" ]; then

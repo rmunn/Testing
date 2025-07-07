@@ -76,7 +76,7 @@ def wrap_getbundle(orig, repo, proto, others, *args, **kwargs):
 
     try:
         write_to_log(repo, log_entry)
-    except (IOError, error.LockError) as err:
+    except (OSError, error.LockError) as err:
         msg = stringutil.forcebytestr(err)
         repo.ui.warn(_(b'unable to append to pull log: %s\n') % msg)
 

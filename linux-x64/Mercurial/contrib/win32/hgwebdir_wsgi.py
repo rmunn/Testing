@@ -101,6 +101,7 @@ if getattr(sys, 'isapidllhandle', None) is not None:
 import isapi_wsgi
 from mercurial.hgweb.hgwebdir_mod import hgwebdir
 
+
 # Example tweak: Replace isapi_wsgi's handler to provide better error message
 # Other stuff could also be done here, like logging errors etc.
 class WsgiHandler(isapi_wsgi.IsapiWsgiHandler):
@@ -114,7 +115,6 @@ application = hgwebdir(hgweb_config)
 
 
 def handler(environ, start_response):
-
     # Translate IIS's weird URLs
     url = environ['SCRIPT_NAME'] + environ['PATH_INFO']
     paths = url[1:].split('/')[path_strip:]

@@ -8,6 +8,15 @@
 #
 # node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
+    # allow passing the version from an environment variable
+    # in case of builds on an older platform that cannot build hg
+    if [ ! -z "$USELOCALHG" ]; then
+        HG="$(which hg)"
+        version=$($HG log -r . --template "{latesttag}")
+        distance=$($HG log -r . --template "{latesttagdistance}")
+        node=$($HG log -r . --template "{node|short}")
+        return
+    fi
     if [ -z "${1+x}" ]; then
         python="python3"
     else

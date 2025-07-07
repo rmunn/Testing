@@ -6,7 +6,7 @@
 #endif
 
 [Setup]
-AppCopyright=Copyright 2005-2023 Olivia Mackall and others
+AppCopyright=Copyright 2005-2025 Olivia Mackall and others
 AppName=Mercurial
 AppVersion={#VERSION}
 OutputBaseFilename=Mercurial-{#VERSION}{#SUFFIX}
@@ -29,7 +29,7 @@ AppContact=mercurial@mercurial-scm.org
 DefaultDirName={pf}\Mercurial
 SourceDir=stage
 VersionInfoDescription=Mercurial distributed SCM (version {#VERSION})
-VersionInfoCopyright=Copyright 2005-2023 Olivia Mackall and others
+VersionInfoCopyright=Copyright 2005-2025 Olivia Mackall and others
 VersionInfoCompany=Olivia Mackall and others
 VersionInfoVersion={#QUAD_VERSION}
 InternalCompressLevel=max

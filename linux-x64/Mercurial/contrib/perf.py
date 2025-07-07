@@ -20,7 +20,10 @@ Configurations
 
 ``profile-benchmark``
   Enable profiling for the benchmarked section.
-  (The first iteration is benchmarked)
+  (by default, the first iteration is benchmarked)
+
+``profiled-runs``
+  list of iteration to profile (starting from 0)
 
 ``run-limits``
   Control the number of runs each benchmark will perform. The option value
@@ -126,7 +129,6 @@ try:
 
     def revlog(opener, *args, **kwargs):
         return mercurial.revlog.revlog(opener, perf_rl_kind, *args, **kwargs)
-
 
 except (ImportError, AttributeError):
     perf_rl_kind = None
@@ -258,7 +260,6 @@ elif safehasattr(cmdutil, 'command'):
                 commands.norepo += b' %s' % b' '.join(parsealiases(name))
             return _command(name, list(options), synopsis)
 
-
 else:
     # for "historical portability":
     # define "@command" annotation locally, because cmdutil.command
@@ -318,6 +319,11 @@ try:
     )
     configitem(
         b'perf',
+        b'profiled-runs',
+        default=mercurial.configitems.dynamicdefault,
+    )
+    configitem(
+        b'perf',
         b'run-limits',
         default=mercurial.configitems.dynamicdefault,
         experimental=True,
@@ -354,7 +360,7 @@ except TypeError:
     )
     configitem(
         b'perf',
-        b'profile-benchmark',
+        b'profiled-runs',
         default=mercurial.configitems.dynamicdefault,
     )
     configitem(
@@ -456,7 +462,10 @@ def gettimer(ui, opts=None):
         return functools.partial(stub_timer, fm), fm
 
     # experimental config: perf.all-timing
-    displayall = ui.configbool(b"perf", b"all-timing", False)
+    displayall = ui.configbool(b"perf", b"all-timing", True)
+
+    # ui.warnnoi18n was introduced in 5209fc94b982
+    ui_warn = ui.warn
 
     # experimental config: perf.run-limits
     limitspec = ui.configlist(b"perf", b"run-limits", [])
@@ -464,26 +473,20 @@ def gettimer(ui, opts=None):
     for item in limitspec:
         parts = item.split(b'-', 1)
         if len(parts) < 2:
-            ui.warn((b'malformatted run limit entry, missing "-": %s\n' % item))
+            ui_warn(b'malformatted run limit entry, missing "-": %s\n' % item)
             continue
         try:
             time_limit = float(_sysstr(parts[0]))
         except ValueError as e:
-            ui.warn(
-                (
-                    b'malformatted run limit entry, %s: %s\n'
-                    % (_bytestr(e), item)
-                )
+            ui_warn(
+                b'malformatted run limit entry, %s: %s\n' % (_bytestr(e), item)
             )
             continue
         try:
             run_limit = int(_sysstr(parts[1]))
         except ValueError as e:
-            ui.warn(
-                (
-                    b'malformatted run limit entry, %s: %s\n'
-                    % (_bytestr(e), item)
-                )
+            ui_warn(
+                b'malformatted run limit entry, %s: %s\n' % (_bytestr(e), item)
             )
             continue
         limits.append((time_limit, run_limit))
@@ -491,9 +494,12 @@ def gettimer(ui, opts=None):
         limits = DEFAULTLIMITS
 
     profiler = None
+    profiled_runs = set()
     if profiling is not None:
         if ui.configbool(b"perf", b"profile-benchmark", False):
-            profiler = profiling.profile(ui)
+            profiler = lambda: profiling.profile(ui)
+            for run in ui.configlist(b"perf", b"profiled-runs", [0]):
+                profiled_runs.add(int(run))
 
     prerun = getint(ui, b"perf", b"pre-run", 0)
     t = functools.partial(
@@ -503,6 +509,7 @@ def gettimer(ui, opts=None):
         limits=limits,
         prerun=prerun,
         profiler=profiler,
+        profiled_runs=profiled_runs,
     )
     return t, fm
 
@@ -547,27 +554,32 @@ def _timer(
     limits=DEFAULTLIMITS,
     prerun=0,
     profiler=None,
+    profiled_runs=(0,),
 ):
     gc.collect()
     results = []
-    begin = util.timer()
     count = 0
     if profiler is None:
-        profiler = NOOPCTX
+        profiler = lambda: NOOPCTX
     for i in range(prerun):
         if setup is not None:
             setup()
         with context():
             func()
+    begin = util.timer()
     keepgoing = True
     while keepgoing:
+        if count in profiled_runs:
+            prof = profiler()
+        else:
+            prof = NOOPCTX
         if setup is not None:
             setup()
         with context():
-            with profiler:
+            gc.collect()
+            with prof:
                 with timeone() as item:
                     r = func()
-        profiler = NOOPCTX
         count += 1
         results.append(item[0])
         cstop = util.timer()
@@ -882,23 +894,142 @@ def perfheads(ui, repo, **opts):
     fm.end()
 
 
+def _default_clear_on_disk_tags_cache(repo):
+    from mercurial import tags
+
+    repo.cachevfs.tryunlink(tags._filename(repo))
+
+
+def _default_clear_on_disk_tags_fnodes_cache(repo):
+    from mercurial import tags
+
+    repo.cachevfs.tryunlink(tags._fnodescachefile)
+
+
+def _default_forget_fnodes(repo, revs):
+    """function used by the perf extension to prune some entries from the
+    fnodes cache"""
+    from mercurial import tags
+
+    missing_1 = b'\xff' * 4
+    missing_2 = b'\xff' * 20
+    cache = tags.hgtagsfnodescache(repo.unfiltered())
+    for r in revs:
+        cache._writeentry(r * tags._fnodesrecsize, missing_1, missing_2)
+    cache.write()
+
+
 @command(
     b'perf::tags|perftags',
     formatteropts
     + [
         (b'', b'clear-revlogs', False, b'refresh changelog and manifest'),
+        (
+            b'',
+            b'clear-on-disk-cache',
+            False,
+            b'clear on disk tags cache (DESTRUCTIVE)',
+        ),
+        (
+            b'',
+            b'clear-fnode-cache-all',
+            False,
+            b'clear on disk file node cache (DESTRUCTIVE),',
+        ),
+        (
+            b'',
+            b'clear-fnode-cache-rev',
+            [],
+            b'clear on disk file node cache (DESTRUCTIVE),',
+            b'REVS',
+        ),
+        (
+            b'',
+            b'update-last',
+            b'',
+            b'simulate an update over the last N revisions (DESTRUCTIVE),',
+            b'N',
+        ),
     ],
 )
 def perftags(ui, repo, **opts):
+    """Benchmark tags retrieval in various situation
+
+    The option marked as (DESTRUCTIVE) will alter the on-disk cache, possibly
+    altering performance after the command was run. However, it does not
+    destroy any stored data.
+    """
+    from mercurial import tags
+
     opts = _byteskwargs(opts)
     timer, fm = gettimer(ui, opts)
     repocleartagscache = repocleartagscachefunc(repo)
     clearrevlogs = opts[b'clear_revlogs']
+    clear_disk = opts[b'clear_on_disk_cache']
+    clear_fnode = opts[b'clear_fnode_cache_all']
+
+    clear_fnode_revs = opts[b'clear_fnode_cache_rev']
+    update_last_str = opts[b'update_last']
+    update_last = None
+    if update_last_str:
+        try:
+            update_last = int(update_last_str)
+        except ValueError:
+            msg = b'could not parse value for update-last: "%s"'
+            msg %= update_last_str
+            hint = b'value should be an integer'
+            raise error.Abort(msg, hint=hint)
+
+    clear_disk_fn = getattr(
+        tags,
+        "clear_cache_on_disk",
+        _default_clear_on_disk_tags_cache,
+    )
+    if getattr(tags, 'clear_cache_fnodes_is_working', False):
+        clear_fnodes_fn = tags.clear_cache_fnodes
+    else:
+        clear_fnodes_fn = _default_clear_on_disk_tags_fnodes_cache
+    clear_fnodes_rev_fn = getattr(
+        tags,
+        "forget_fnodes",
+        _default_forget_fnodes,
+    )
+
+    clear_revs = []
+    if clear_fnode_revs:
+        clear_revs.extend(scmutil.revrange(repo, clear_fnode_revs))
+
+    if update_last:
+        revset = b'last(all(), %d)' % update_last
+        last_revs = repo.unfiltered().revs(revset)
+        clear_revs.extend(last_revs)
+
+        from mercurial import repoview
+
+        rev_filter = {(b'experimental', b'extra-filter-revs'): revset}
+        with repo.ui.configoverride(rev_filter, source=b"perf"):
+            filter_id = repoview.extrafilter(repo.ui)
+
+        filter_name = b'%s%%%s' % (repo.filtername, filter_id)
+        pre_repo = repo.filtered(filter_name)
+        pre_repo.tags()  # warm the cache
+        old_tags_path = repo.cachevfs.join(tags._filename(pre_repo))
+        new_tags_path = repo.cachevfs.join(tags._filename(repo))
+
+    clear_revs = sorted(set(clear_revs))
 
     def s():
+        if update_last:
+            util.copyfile(old_tags_path, new_tags_path)
         if clearrevlogs:
             clearchangelog(repo)
             clearfilecache(repo.unfiltered(), 'manifest')
+        if clear_disk:
+            clear_disk_fn(repo)
+        if clear_fnode:
+            clear_fnodes_fn(repo)
+        elif clear_revs:
+            clear_fnodes_rev_fn(repo, clear_revs)
         repocleartagscache()
 
     def t():
@@ -1591,7 +1722,8 @@ def perfpathcopies(ui, repo, rev1, rev2, **opts):
     b'perf::phases|perfphases',
     [
         (b'', b'full', False, b'include file reading time too'),
-    ],
+    ]
+    + formatteropts,
     b"",
 )
 def perfphases(ui, repo, **opts):
@@ -1600,6 +1732,7 @@ def perfphases(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     _phases = repo._phasecache
     full = opts.get(b'full')
+    tip_rev = repo.changelog.tiprev()
 
     def d():
         phases = _phases
@@ -1607,7 +1740,7 @@ def perfphases(ui, repo, **opts):
             clearfilecache(repo, b'_phasecache')
             phases = repo._phasecache
         phases.invalidate()
-        phases.loadphaserevs(repo)
+        phases.phase(repo, tip_rev)
 
     timer(d)
     fm.end()
@@ -1788,7 +1921,7 @@ def perfindex(ui, repo, **opts):
 
     opts = _byteskwargs(opts)
     timer, fm = gettimer(ui, opts)
-    mercurial.revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    mercurial.revlog._prereadsize = 2**24  # disable lazy parser in old hg
     if opts[b'no_lookup']:
         if opts['rev']:
             raise error.Abort('--no-lookup and --rev are mutually exclusive')
@@ -1847,7 +1980,7 @@ def perfnodemap(ui, repo, **opts):
 
     opts = _byteskwargs(opts)
     timer, fm = gettimer(ui, opts)
-    mercurial.revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    mercurial.revlog._prereadsize = 2**24  # disable lazy parser in old hg
 
     unfi = repo.unfiltered()
     clearcaches = opts[b'clear_caches']
@@ -1908,6 +2041,19 @@ def perfstartup(ui, repo, **opts):
     fm.end()
 
 
+def _clear_store_audit_cache(repo):
+    vfs = getsvfs(repo)
+    # unwrap the fncache proxy
+    if not hasattr(vfs, "audit"):
+        vfs = getattr(vfs, "vfs", vfs)
+    auditor = vfs.audit
+    if hasattr(auditor, "clear_audit_cache"):
+        auditor.clear_audit_cache()
+    elif hasattr(auditor, "audited"):
+        auditor.audited.clear()
+        auditor.auditeddir.clear()
+
+
 def _find_stream_generator(version):
     """find the proper generator function for this stream version"""
     import mercurial.streamclone
@@ -1919,7 +2065,7 @@ def _find_stream_generator(version):
     if generatev1 is not None:
 
         def generate(repo):
-            entries, bytes, data = generatev2(repo, None, None, True)
+            entries, bytes, data = generatev1(repo, None, None, True)
             return data
 
         available[b'v1'] = generatev1
@@ -1937,8 +2083,7 @@ def _find_stream_generator(version):
     if generatev3 is not None:
 
         def generate(repo):
-            entries, bytes, data = generatev3(repo, None, None, True)
-            return data
+            return generatev3(repo, None, None, True)
 
         available[b'v3-exp'] = generate
 
@@ -1964,7 +2109,8 @@ def _find_stream_generator(version):
             b'',
             b'stream-version',
             b'latest',
-            b'stream version to use ("v1", "v2", "v3" or "latest", (the default))',
+            b'stream version to use ("v1", "v2", "v3-exp" '
+            b'or "latest", (the default))',
         ),
     ]
     + formatteropts,
@@ -1981,6 +2127,9 @@ def perf_stream_clone_scan(ui, repo, stream_version, **opts):
 
     def setupone():
         result_holder[0] = None
+        # This is important for the full generation, even if it does not
+        # currently matters, it seems safer to also real it here.
+        _clear_store_audit_cache(repo)
 
     generate = _find_stream_generator(stream_version)
 
@@ -1999,7 +2148,8 @@ def perf_stream_clone_scan(ui, repo, stream_version, **opts):
             b'',
             b'stream-version',
             b'latest',
-            b'stream version to us ("v1", "v2" or "latest", (the default))',
+            b'stream version to us ("v1", "v2", "v3-exp" '
+            b'or "latest", (the default))',
         ),
     ]
     + formatteropts,
@@ -2015,18 +2165,35 @@ def perf_stream_clone_generate(ui, repo, stream_version, **opts):
 
     generate = _find_stream_generator(stream_version)
 
+    def setup():
+        _clear_store_audit_cache(repo)
+
     def runone():
         # the lock is held for the duration the initialisation
         for chunk in generate(repo):
             pass
 
-    timer(runone, title=b"generate")
+    timer(runone, setup=setup, title=b"generate")
     fm.end()
 
 
 @command(
     b'perf::stream-consume',
-    formatteropts,
+    [
+        (
+            b'',
+            b'in-memory-bundle',
+            False,
+            b'load the full bundle in userspace memory before proceeding',
+        ),
+        (
+            b'',
+            b'unbundle-progress',
+            False,
+            b"compute and display progress during stream processing",
+        ),
+    ]
+    + formatteropts,
 )
 def perf_stream_clone_consume(ui, repo, filename, **opts):
     """benchmark the full application of a stream clone
@@ -2064,28 +2231,54 @@ def perf_stream_clone_consume(ui, repo, filename, **opts):
     if not (os.path.isfile(filename) and os.access(filename, os.R_OK)):
         raise error.Abort("not a readable file: %s" % filename)
 
-    run_variables = [None, None]
+    run_variables = [None, None, None]
+
+    # we create the new repository next to the other one for two reasons:
+    # - this way we use the same file system, which are relevant for benchmark
+    # - if /tmp/ is small, the operation could overfills it.
+    source_repo_dir = os.path.dirname(repo.root)
 
     @contextlib.contextmanager
     def context():
-        with open(filename, mode='rb') as bundle:
-            with tempfile.TemporaryDirectory() as tmp_dir:
+        with open(filename, mode='rb', buffering=0) as bundle:
+            bundle_name = bundle.name
+            if opts.get(b'in_memory_bundle'):
+                # you hate memory, don't you?
+                import io
+
+                bundle = io.BytesIO(bundle.read())
+            with tempfile.TemporaryDirectory(
+                prefix=b'hg-perf-stream-consume-',
+                dir=source_repo_dir,
+            ) as tmp_dir:
                 tmp_dir = fsencode(tmp_dir)
                 run_variables[0] = bundle
-                run_variables[1] = tmp_dir
+                run_variables[1] = bundle_name
+                run_variables[2] = tmp_dir
                 yield
                 run_variables[0] = None
                 run_variables[1] = None
+                run_variables[2] = None
 
     def runone():
         bundle = run_variables[0]
-        tmp_dir = run_variables[1]
+        bundle_name = run_variables[1]
+        tmp_dir = run_variables[2]
+
+        # we actually wants to copy all config to ensure the repo config is
+        # taken in account during the benchmark
+        new_ui = repo.ui.__class__(repo.ui)
         # only pass ui when no srcrepo
         localrepo.createrepository(
-            repo.ui, tmp_dir, requirements=repo.requirements
+            new_ui, tmp_dir, requirements=repo.requirements
         )
-        target = hg.repository(repo.ui, tmp_dir)
-        gen = exchange.readbundle(target.ui, bundle, bundle.name)
+        target = hg.repository(new_ui, tmp_dir)
+        # we don't need to use a config override here because this is a
+        # dedicated UI object for the disposable repository create for the
+        # benchmark.
+        show_progress = bool(opts.get("show_progress"))
+        target.ui.setconfig(b"progress", b"disable", not show_progress)
+        gen = exchange.readbundle(target.ui, bundle, bundle_name)
         # stream v1
         if util.safehasattr(gen, 'apply'):
             gen.apply(target)
@@ -2219,7 +2412,7 @@ def perfnodelookup(ui, repo, rev, **opts):
     timer, fm = gettimer(ui, opts)
     import mercurial.revlog
 
-    mercurial.revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    mercurial.revlog._prereadsize = 2**24  # disable lazy parser in old hg
     n = scmutil.revsingle(repo, rev).node()
 
     try:
@@ -2887,13 +3080,21 @@ def perfbdiff(ui, repo, file_, rev=None, count=None, threads=0, **opts):
 
 @command(
     b'perf::unbundle',
-    formatteropts,
+    [
+        (b'', b'as-push', None, b'pretend the bundle comes from a push'),
+    ]
+    + formatteropts,
     b'BUNDLE_FILE',
 )
 def perf_unbundle(ui, repo, fname, **opts):
     """benchmark application of a bundle in a repository.
 
-    This does not include the final transaction processing"""
+    This does not include the final transaction processing
+
+    The --as-push option make the unbundle operation appears like it comes from
+    a client push. It change some aspect of the processing and associated
+    performance profile.
+    """
 
     from mercurial import exchange
     from mercurial import bundle2
@@ -2914,13 +3115,17 @@ def perf_unbundle(ui, repo, fname, **opts):
     args = getargspec(error.Abort.__init__).args
     post_18415fc918a1 = "detailed_exit_code" in args
 
+    unbundle_source = b'perf::unbundle'
+    if opts[b'as_push']:
+        unbundle_source = b'push'
+
     old_max_inline = None
     try:
         if not (pre_63edc384d3b7 or post_18415fc918a1):
             # disable inlining
             old_max_inline = mercurial.revlog._maxinline
             # large enough to never happen
-            mercurial.revlog._maxinline = 2 ** 50
+            mercurial.revlog._maxinline = 2**50
 
         with repo.lock():
             bundle = [None, None]
@@ -2949,7 +3154,7 @@ def perf_unbundle(ui, repo, fname, **opts):
                             repo,
                             gen,
                             tr,
-                            source=b'perf::unbundle',
+                            source=unbundle_source,
                             url=fname,
                         )
 
@@ -3107,6 +3312,14 @@ def perfrevlogindex(ui, repo, file_=None, **opts):
     parse_index_v1 = getattr(mercurial.revlog, 'parse_index_v1', None)
     if parse_index_v1 is None:
         parse_index_v1 = mercurial.revlog.revlogio().parseindex
+
+    uses_generaldelta = "uses_generaldelta" in getargspec(parse_index_v1).args
+    if uses_generaldelta is not None:
+        # Mercurial 7.0 and above
+        # This test isn't affected by generaldelta at all, so just pass `False`
+        parse_index_v1 = functools.partial(
+            parse_index_v1, uses_generaldelta=False
+        )
 
     rllen = len(rl)
 
@@ -3359,7 +3572,7 @@ def perfrevlogwrite(ui, repo, file_=None, startrev=1000, stoprev=-1, **opts):
 
     # get a formatter
     fm = ui.formatter(b'perf', opts)
-    displayall = ui.configbool(b"perf", b"all-timing", False)
+    displayall = ui.configbool(b"perf", b"all-timing", True)
 
     # print individual details if requested
     if opts['details']:
@@ -3429,7 +3642,10 @@ def _timeonewrite(
     timings = []
     tr = _faketr()
     with _temprevlog(ui, orig, startrev) as dest:
-        dest._lazydeltabase = lazydeltabase
+        if hasattr(dest, "delta_config"):
+            dest.delta_config.lazy_delta_base = lazydeltabase
+        else:
+            dest._lazydeltabase = lazydeltabase
         revs = list(orig.revs(startrev, stoprev))
         total = len(revs)
         topic = 'adding'
@@ -3597,11 +3813,20 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
 
     rl = cmdutil.openrevlog(repo, b'perfrevlogchunks', file_, opts)
 
-    # _chunkraw was renamed to _getsegmentforrevs.
+    if rl.uses_rust:
+        raise NotImplementedError(
+            "perfrevlogchunks is not implemented for the Rust revlog"
+        )
+
+    # - _chunkraw was renamed to _getsegmentforrevs
+    # - _getsegmentforrevs was moved on the inner object
     try:
-        segmentforrevs = rl._getsegmentforrevs
+        segmentforrevs = rl._inner.get_segment_for_revs
     except AttributeError:
-        segmentforrevs = rl._chunkraw
+        try:
+            segmentforrevs = rl._getsegmentforrevs
+        except AttributeError:
+            segmentforrevs = rl._chunkraw
 
     # Verify engines argument.
     if engines:
@@ -3624,62 +3849,101 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
 
     revs = list(rl.revs(startrev, len(rl) - 1))
 
-    def rlfh(rl):
-        if rl._inline:
+    @contextlib.contextmanager
+    def reading(rl):
+        if getattr(rl, 'reading', None) is not None:
+            with rl.reading():
+                yield None
+        elif rl._inline:
             indexfile = getattr(rl, '_indexfile', None)
             if indexfile is None:
                 # compatibility with <= hg-5.8
                 indexfile = getattr(rl, 'indexfile')
-            return getsvfs(repo)(indexfile)
+            yield getsvfs(repo)(indexfile)
         else:
             datafile = getattr(rl, 'datafile', getattr(rl, 'datafile'))
-            return getsvfs(repo)(datafile)
+            yield getsvfs(repo)(datafile)
+
+    if getattr(rl, 'reading', None) is not None:
+
+        @contextlib.contextmanager
+        def lazy_reading(rl):
+            with rl.reading():
+                yield
+
+    else:
+
+        @contextlib.contextmanager
+        def lazy_reading(rl):
+            yield
 
     def doread():
         rl.clearcaches()
         for rev in revs:
-            segmentforrevs(rev, rev)
+            with lazy_reading(rl):
+                segmentforrevs(rev, rev)
 
     def doreadcachedfh():
         rl.clearcaches()
-        fh = rlfh(rl)
-        for rev in revs:
-            segmentforrevs(rev, rev, df=fh)
+        with reading(rl) as fh:
+            if fh is not None:
+                for rev in revs:
+                    segmentforrevs(rev, rev, df=fh)
+            else:
+                for rev in revs:
+                    segmentforrevs(rev, rev)
 
     def doreadbatch():
         rl.clearcaches()
-        segmentforrevs(revs[0], revs[-1])
+        with lazy_reading(rl):
+            segmentforrevs(revs[0], revs[-1])
 
     def doreadbatchcachedfh():
         rl.clearcaches()
-        fh = rlfh(rl)
-        segmentforrevs(revs[0], revs[-1], df=fh)
+        with reading(rl) as fh:
+            if fh is not None:
+                segmentforrevs(revs[0], revs[-1], df=fh)
+            else:
+                segmentforrevs(revs[0], revs[-1])
 
     def dochunk():
         rl.clearcaches()
-        fh = rlfh(rl)
-        for rev in revs:
-            rl._chunk(rev, df=fh)
+        # chunk used to be available directly on the revlog
+        _chunk = getattr(rl, '_inner', rl)._chunk
+        with reading(rl) as fh:
+            if fh is not None:
+                for rev in revs:
+                    _chunk(rev, df=fh)
+            else:
+                for rev in revs:
+                    _chunk(rev)
 
     chunks = [None]
 
     def dochunkbatch():
         rl.clearcaches()
-        fh = rlfh(rl)
-        # Save chunks as a side-effect.
-        chunks[0] = rl._chunks(revs, df=fh)
+        _chunks = getattr(rl, '_inner', rl)._chunks
+        with reading(rl) as fh:
+            if fh is not None:
+                # Save chunks as a side-effect.
+                chunks[0] = _chunks(revs, df=fh)
+            else:
+                # Save chunks as a side-effect.
+                chunks[0] = _chunks(revs)
 
     def docompress(compressor):
         rl.clearcaches()
 
+        compressor_holder = getattr(rl, '_inner', rl)
+
         try:
             # Swap in the requested compression engine.
-            oldcompressor = rl._compressor
-            rl._compressor = compressor
+            oldcompressor = compressor_holder._compressor
+            compressor_holder._compressor = compressor
             for chunk in chunks[0]:
                 rl.compress(chunk)
         finally:
-            rl._compressor = oldcompressor
+            compressor_holder._compressor = oldcompressor
 
     benches = [
         (lambda: doread(), b'read'),
@@ -3734,15 +3998,35 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         raise error.CommandError(b'perfrevlogrevision', b'invalid arguments')
 
     r = cmdutil.openrevlog(repo, b'perfrevlogrevision', file_, opts)
+    if r.uses_rust:
+        raise NotImplementedError(
+            "perfrevlogrevision is not implemented for the Rust revlog"
+        )
 
     # _chunkraw was renamed to _getsegmentforrevs.
     try:
-        segmentforrevs = r._getsegmentforrevs
+        segmentforrevs = r._inner.get_segment_for_revs
     except AttributeError:
-        segmentforrevs = r._chunkraw
+        try:
+            segmentforrevs = r._getsegmentforrevs
+        except AttributeError:
+            segmentforrevs = r._chunkraw
 
     node = r.lookup(rev)
     rev = r.rev(node)
+
+    if getattr(r, 'reading', None) is not None:
+
+        @contextlib.contextmanager
+        def lazy_reading(r):
+            with r.reading():
+                yield
+
+    else:
+
+        @contextlib.contextmanager
+        def lazy_reading(r):
+            yield
 
     def getrawchunks(data, chain):
         start = r.start
@@ -3777,7 +4061,8 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         if not cache:
             r.clearcaches()
         for item in slicedchain:
-            segmentforrevs(item[0], item[-1])
+            with lazy_reading(r):
+                segmentforrevs(item[0], item[-1])
 
     def doslice(r, chain, size):
         for s in slicechunk(r, chain, targetsize=size):
@@ -3815,13 +4100,19 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
 
     size = r.length(rev)
     chain = r._deltachain(rev)[0]
-    if not getattr(r, '_withsparseread', False):
+
+    with_sparse_read = False
+    if hasattr(r, 'data_config'):
+        with_sparse_read = r.data_config.with_sparse_read
+    elif hasattr(r, '_withsparseread'):
+        with_sparse_read = r._withsparseread
+    if with_sparse_read:
         slicedchain = (chain,)
     else:
         slicedchain = tuple(slicechunk(r, chain, targetsize=size))
     data = [segmentforrevs(seg[0], seg[-1])[1] for seg in slicedchain]
     rawchunks = getrawchunks(data, slicedchain)
-    bins = r._chunks(chain)
+    bins = r._inner._chunks(chain)
     text = bytes(bins[0])
     bins = bins[1:]
     text = mdiff.patches(text, bins)
@@ -3832,7 +4123,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         (lambda: doread(chain), b'read'),
     ]
 
-    if getattr(r, '_withsparseread', False):
+    if with_sparse_read:
         slicing = (lambda: doslice(r, chain, size), b'slice-sparse-chain')
         benches.append(slicing)
 
@@ -4003,15 +4294,24 @@ def perfbranchmap(ui, repo, *filternames, **opts):
         # add unfiltered
         allfilters.append(None)
 
-    if util.safehasattr(branchmap.branchcache, 'fromfile'):
+    old_branch_cache_from_file = None
+    branchcacheread = None
+    if util.safehasattr(branchmap, 'branch_cache_from_file'):
+        old_branch_cache_from_file = branchmap.branch_cache_from_file
+        branchmap.branch_cache_from_file = lambda *args: None
+    elif util.safehasattr(branchmap.branchcache, 'fromfile'):
         branchcacheread = safeattrsetter(branchmap.branchcache, b'fromfile')
         branchcacheread.set(classmethod(lambda *args: None))
     else:
         # older versions
         branchcacheread = safeattrsetter(branchmap, b'read')
         branchcacheread.set(lambda *args: None)
-    branchcachewrite = safeattrsetter(branchmap.branchcache, b'write')
-    branchcachewrite.set(lambda *args: None)
+    if util.safehasattr(branchmap, '_LocalBranchCache'):
+        branchcachewrite = safeattrsetter(branchmap._LocalBranchCache, b'write')
+        branchcachewrite.set(lambda *args: None)
+    else:
+        branchcachewrite = safeattrsetter(branchmap.branchcache, b'write')
+        branchcachewrite.set(lambda *args: None)
     try:
         for name in allfilters:
             printname = name
@@ -4019,7 +4319,10 @@ def perfbranchmap(ui, repo, *filternames, **opts):
                 printname = b'unfiltered'
             timer(getbranchmap(name), title=printname)
     finally:
-        branchcacheread.restore()
+        if old_branch_cache_from_file is not None:
+            branchmap.branch_cache_from_file = old_branch_cache_from_file
+        if branchcacheread is not None:
+            branchcacheread.restore()
         branchcachewrite.restore()
     fm.end()
 
@@ -4101,6 +4404,19 @@ def perfbranchmapupdate(ui, repo, base=(), target=(), **opts):
         baserepo = repo.filtered(b'__perf_branchmap_update_base')
         targetrepo = repo.filtered(b'__perf_branchmap_update_target')
 
+        bcache = repo.branchmap()
+        copy_method = 'copy'
+
+        copy_base_kwargs = copy_base_kwargs = {}
+        if hasattr(bcache, 'copy'):
+            if 'repo' in getargspec(bcache.copy).args:
+                copy_base_kwargs = {"repo": baserepo}
+                copy_target_kwargs = {"repo": targetrepo}
+        else:
+            copy_method = 'inherit_for'
+            copy_base_kwargs = {"repo": baserepo}
+            copy_target_kwargs = {"repo": targetrepo}
+
         # try to find an existing branchmap to reuse
         subsettable = getbranchmapsubsettable()
         candidatefilter = subsettable.get(None)
@@ -4109,7 +4425,7 @@ def perfbranchmapupdate(ui, repo, base=(), target=(), **opts):
             if candidatebm.validfor(baserepo):
                 filtered = repoview.filterrevs(repo, candidatefilter)
                 missing = [r for r in allbaserevs if r in filtered]
-                base = candidatebm.copy()
+                base = getattr(candidatebm, copy_method)(**copy_base_kwargs)
                 base.update(baserepo, missing)
                 break
             candidatefilter = subsettable.get(candidatefilter)
@@ -4119,7 +4435,7 @@ def perfbranchmapupdate(ui, repo, base=(), target=(), **opts):
             base.update(baserepo, allbaserevs)
 
         def setup():
-            x[0] = base.copy()
+            x[0] = getattr(base, copy_method)(**copy_target_kwargs)
             if clearcaches:
                 unfi._revbranchcache = None
                 clearchangelog(repo)
@@ -4166,10 +4482,10 @@ def perfbranchmapload(ui, repo, filter=b'', list=False, **opts):
 
     repo.branchmap()  # make sure we have a relevant, up to date branchmap
 
-    try:
-        fromfile = branchmap.branchcache.fromfile
-    except AttributeError:
-        # older versions
+    fromfile = getattr(branchmap, 'branch_cache_from_file', None)
+    if fromfile is None:
+        fromfile = getattr(branchmap.branchcache, 'fromfile', None)
+    if fromfile is None:
         fromfile = branchmap.read
 
     currentfilter = filter
@@ -4235,7 +4551,7 @@ def perflrucache(
     sets=10000,
     mixed=10000,
     mixedgetfreq=50,
-    **opts
+    **opts,
 ):
     opts = _byteskwargs(opts)
 
@@ -4421,7 +4737,8 @@ def uisetup(ui):
                 )
             return orig(repo, cmd, file_, opts)
 
-        extensions.wrapfunction(cmdutil, b'openrevlog', openrevlog)
+        name = _sysstr(b'openrevlog')
+        extensions.wrapfunction(cmdutil, name, openrevlog)
 
 
 @command(

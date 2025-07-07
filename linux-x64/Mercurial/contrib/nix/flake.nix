@@ -53,7 +53,7 @@
       # but uses formatter features from nightly.
       # TODO: make cargo use the formatter from nightly automatically
       #       (not supported by rustup/cargo yet? workaround?)
-      # rustPlatform = pkgs.rust-bin.stable."1.61.0".default;
+      # rustPlatform = pkgs.rust-bin.stable."1.79.0".default;
       # rustPlatformFormatter = pkgs.rust-bin.nightly."2023-04-20".default;
 
       # The CI uses an old version of the Black code formatter,

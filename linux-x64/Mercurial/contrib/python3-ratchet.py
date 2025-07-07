@@ -93,23 +93,6 @@ def main(argv=()):
                 '--working-tests must be from that repo'
             )
             sys.exit(1)
-    try:
-        subprocess.check_call(
-            [
-                opts.python3,
-                '-c',
-                'import sys ; '
-                'assert ((3, 5) <= sys.version_info < (3, 6) '
-                'or sys.version_info >= (3, 6, 2))',
-            ]
-        )
-    except subprocess.CalledProcessError:
-        print(
-            'warning: Python 3.6.0 and 3.6.1 have '
-            'a bug which breaks Mercurial'
-        )
-        print('(see https://bugs.python.org/issue29714 for details)')
-        sys.exit(1)
 
     rt = subprocess.Popen(
         [

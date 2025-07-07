@@ -16,13 +16,13 @@ import urllib.request
 
 DOWNLOADS = {
     'gettext': {
-        'url': 'https://versaweb.dl.sourceforge.net/project/gnuwin32/gettext/0.14.4/gettext-0.14.4-bin.zip',
+        'url': 'https://www.mercurial-scm.org/release/windows/gettext-0.14.4-bin.zip',
         'size': 1606131,
         'sha256': '60b9ef26bc5cceef036f0424e542106cf158352b2677f43a01affd6d82a1d641',
         'version': '0.14.4',
     },
     'gettext-dep': {
-        'url': 'https://versaweb.dl.sourceforge.net/project/gnuwin32/gettext/0.14.4/gettext-0.14.4-dep.zip',
+        'url': 'https://www.mercurial-scm.org/release/windows/gettext-0.14.4-dep.zip',
         'size': 715086,
         'sha256': '411f94974492fd2ecf52590cb05b1023530aec67e64154a88b1e4ebcd9c28588',
     },

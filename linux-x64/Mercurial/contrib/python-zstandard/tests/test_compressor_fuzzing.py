@@ -10,17 +10,11 @@ except ImportError:
 
 import zstandard as zstd
 
-from .common import (
-    make_cffi,
-    NonClosingBytesIO,
-    random_input_data,
-    TestCase,
-)
+from .common import random_input_data
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_stream_reader_fuzzing(TestCase):
+class TestCompressor_stream_reader_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[hypothesis.HealthCheck.large_base_example]
     )
@@ -137,7 +131,6 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
     def test_buffer_source_read_variance(
         self, original, level, source_read_size, read_sizes
     ):
-
         refctx = zstd.ZstdCompressor(level=level)
         ref_frame = refctx.compress(original)
 
@@ -203,7 +196,6 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
     def test_buffer_source_readinto(
         self, original, level, source_read_size, read_size
     ):
-
         refctx = zstd.ZstdCompressor(level=level)
         ref_frame = refctx.compress(original)
 
@@ -273,7 +265,6 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
     def test_buffer_source_readinto_variance(
         self, original, level, source_read_size, read_sizes
     ):
-
         refctx = zstd.ZstdCompressor(level=level)
         ref_frame = refctx.compress(original)
 
@@ -410,7 +401,6 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
     def test_buffer_source_read1_variance(
         self, original, level, source_read_size, read_sizes
     ):
-
         refctx = zstd.ZstdCompressor(level=level)
         ref_frame = refctx.compress(original)
 
@@ -551,7 +541,6 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
     def test_buffer_source_readinto1_variance(
         self, original, level, source_read_size, read_sizes
     ):
-
         refctx = zstd.ZstdCompressor(level=level)
         ref_frame = refctx.compress(original)
 
@@ -574,8 +563,7 @@ class TestCompressor_stream_reader_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_stream_writer_fuzzing(TestCase):
+class TestCompressor_stream_writer_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.sampled_from(random_input_data()),
         level=strategies.integers(min_value=1, max_value=5),
@@ -586,9 +574,9 @@ class TestCompressor_stream_writer_fuzzing(TestCase):
         ref_frame = refctx.compress(original)
 
         cctx = zstd.ZstdCompressor(level=level)
-        b = NonClosingBytesIO()
+        b = io.BytesIO()
         with cctx.stream_writer(
-            b, size=len(original), write_size=write_size
+            b, size=len(original), write_size=write_size, closefd=False
         ) as compressor:
             compressor.write(original)
 
@@ -596,8 +584,7 @@ class TestCompressor_stream_writer_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_copy_stream_fuzzing(TestCase):
+class TestCompressor_copy_stream_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.sampled_from(random_input_data()),
         level=strategies.integers(min_value=1, max_value=5),
@@ -626,8 +613,7 @@ class TestCompressor_copy_stream_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_compressobj_fuzzing(TestCase):
+class TestCompressor_compressobj_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
             hypothesis.HealthCheck.large_base_example,
@@ -718,8 +704,7 @@ class TestCompressor_compressobj_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_read_to_iter_fuzzing(TestCase):
+class TestCompressor_read_to_iter_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.sampled_from(random_input_data()),
         level=strategies.integers(min_value=1, max_value=5),
@@ -748,7 +733,11 @@ class TestCompressor_read_to_iter_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-class TestCompressor_multi_compress_to_buffer_fuzzing(TestCase):
+@unittest.skipUnless(
+    "multi_compress_to_buffer" in zstd.backend_features,
+    "multi_compress_to_buffer not available",
+)
+class TestCompressor_multi_compress_to_buffer_fuzzing(unittest.TestCase):
     @hypothesis.given(
         original=strategies.lists(
             strategies.sampled_from(random_input_data()),
@@ -767,9 +756,6 @@ class TestCompressor_multi_compress_to_buffer_fuzzing(TestCase):
 
         cctx = zstd.ZstdCompressor(level=1, write_checksum=True, **kwargs)
 
-        if not hasattr(cctx, "multi_compress_to_buffer"):
-            self.skipTest("multi_compress_to_buffer not available")
-
         result = cctx.multi_compress_to_buffer(original, threads=-1)
 
         self.assertEqual(len(result), len(original))
@@ -785,10 +771,10 @@ class TestCompressor_multi_compress_to_buffer_fuzzing(TestCase):
 
 
 @unittest.skipUnless("ZSTD_SLOW_TESTS" in os.environ, "ZSTD_SLOW_TESTS not set")
-@make_cffi
-class TestCompressor_chunker_fuzzing(TestCase):
+class TestCompressor_chunker_fuzzing(unittest.TestCase):
     @hypothesis.settings(
         suppress_health_check=[
+            hypothesis.HealthCheck.data_too_large,
             hypothesis.HealthCheck.large_base_example,
             hypothesis.HealthCheck.too_slow,
         ]

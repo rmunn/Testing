@@ -25,9 +25,9 @@ draft() and ::tip
 0::tip
 roots(0::tip)
 author(lmoscovicz)
-author(olivia)
-author(lmoscovicz) or author(olivia)
-author(olivia) or author(lmoscovicz)
+author("pierre-yves")
+author(lmoscovicz) or author("pierre-yves")
+author("pierre-yves") or author(lmoscovicz)
 tip:0
 0::
 # those two `roots(...)` inputs are close to what phase movement use.

@@ -3,16 +3,14 @@ import unittest
 
 import zstandard as zstd
 
-from .common import TestCase
-
 ss = struct.Struct("=QQ")
 
 
-class TestBufferWithSegments(TestCase):
+@unittest.skipUnless(
+    "buffer_types" in zstd.backend_features, "buffer types not available"
+)
+class TestBufferWithSegments(unittest.TestCase):
     def test_arguments(self):
-        if not hasattr(zstd, "BufferWithSegments"):
-            self.skipTest("BufferWithSegments not available")
-
         with self.assertRaises(TypeError):
             zstd.BufferWithSegments()
 
@@ -26,18 +24,12 @@ class TestBufferWithSegments(TestCase):
             zstd.BufferWithSegments(b"foo", b"\x00\x00")
 
     def test_invalid_offset(self):
-        if not hasattr(zstd, "BufferWithSegments"):
-            self.skipTest("BufferWithSegments not available")
-
         with self.assertRaisesRegex(
             ValueError, "offset within segments array references memory"
         ):
             zstd.BufferWithSegments(b"foo", ss.pack(0, 4))
 
     def test_invalid_getitem(self):
-        if not hasattr(zstd, "BufferWithSegments"):
-            self.skipTest("BufferWithSegments not available")
-
         b = zstd.BufferWithSegments(b"foo", ss.pack(0, 3))
 
         with self.assertRaisesRegex(IndexError, "offset must be non-negative"):
@@ -50,9 +42,6 @@ class TestBufferWithSegments(TestCase):
             test = b[2]
 
     def test_single(self):
-        if not hasattr(zstd, "BufferWithSegments"):
-            self.skipTest("BufferWithSegments not available")
-
         b = zstd.BufferWithSegments(b"foo", ss.pack(0, 3))
         self.assertEqual(len(b), 1)
         self.assertEqual(b.size, 3)
@@ -63,9 +52,6 @@ class TestBufferWithSegments(TestCase):
         self.assertEqual(b[0].tobytes(), b"foo")
 
     def test_multiple(self):
-        if not hasattr(zstd, "BufferWithSegments"):
-            self.skipTest("BufferWithSegments not available")
-
         b = zstd.BufferWithSegments(
             b"foofooxfooxy",
             b"".join([ss.pack(0, 3), ss.pack(3, 4), ss.pack(7, 5)]),
@@ -79,20 +65,17 @@ class TestBufferWithSegments(TestCase):
         self.assertEqual(b[2].tobytes(), b"fooxy")
 
 
-class TestBufferWithSegmentsCollection(TestCase):
+@unittest.skipUnless(
+    "buffer_types" in zstd.backend_features, "buffer types not available"
+)
+class TestBufferWithSegmentsCollection(unittest.TestCase):
     def test_empty_constructor(self):
-        if not hasattr(zstd, "BufferWithSegmentsCollection"):
-            self.skipTest("BufferWithSegmentsCollection not available")
-
         with self.assertRaisesRegex(
             ValueError, "must pass at least 1 argument"
         ):
             zstd.BufferWithSegmentsCollection()
 
     def test_argument_validation(self):
-        if not hasattr(zstd, "BufferWithSegmentsCollection"):
-            self.skipTest("BufferWithSegmentsCollection not available")
-
         with self.assertRaisesRegex(
             TypeError, "arguments must be BufferWithSegments"
         ):
@@ -111,9 +94,6 @@ class TestBufferWithSegmentsCollection(TestCase):
             zstd.BufferWithSegmentsCollection(zstd.BufferWithSegments(b"", b""))
 
     def test_length(self):
-        if not hasattr(zstd, "BufferWithSegmentsCollection"):
-            self.skipTest("BufferWithSegmentsCollection not available")
-
         b1 = zstd.BufferWithSegments(b"foo", ss.pack(0, 3))
         b2 = zstd.BufferWithSegments(
             b"barbaz", b"".join([ss.pack(0, 3), ss.pack(3, 3)])
@@ -132,9 +112,6 @@ class TestBufferWithSegmentsCollection(TestCase):
         self.assertEqual(c.size(), 9)
 
     def test_getitem(self):
-        if not hasattr(zstd, "BufferWithSegmentsCollection"):
-            self.skipTest("BufferWithSegmentsCollection not available")
-
         b1 = zstd.BufferWithSegments(b"foo", ss.pack(0, 3))
         b2 = zstd.BufferWithSegments(
             b"barbaz", b"".join([ss.pack(0, 3), ss.pack(3, 3)])
