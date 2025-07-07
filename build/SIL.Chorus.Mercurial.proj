@@ -54,7 +54,7 @@
 		<Copy SourceFiles="$(RootDir)\README.md" DestinationFolder="$(NuGetDocsFolder)" />
 		<Exec Condition="'$(NuGetCommand)' == '$(NuGetExePath)'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
 			WorkingDirectory="$(NuGetBuildDir)"/>
-		<Exec Condition="'$(NuGetCommand)' == 'dotnet'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -o $(NuGetPackageDir)"
+		<Exec Condition="'$(NuGetCommand)' == 'dotnet'" Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) $(NuGetBuildDir)\SIL.Chorus.Mercurial.nuspec"
 			WorkingDirectory="$(NuGetBuildDir)"/>
 	</Target>
 
