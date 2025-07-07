@@ -105,7 +105,7 @@ jobs:
     #   run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
 
     - name: Nuget pack
-      run: dotnet msbuild -target:Build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
+      run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
 
     - name: ls
       run: ls -lR
