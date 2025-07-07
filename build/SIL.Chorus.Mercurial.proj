@@ -15,17 +15,18 @@
 
 	<Target Name="Build">
 		<CallTarget Targets="Clean"/>
+		<CallTarget Targets="DownloadNuGet"/>
 		<CallTarget Targets="BuildPackage"/>
 	</Target>
 
-	<Target Name="Pack" DependsOnTargets="BuildPackage">
+	<Target Name="Pack" DependsOnTargets="Build">
 	</Target>
 
 	<Target Name="Clean">
 		<RemoveDir Directories="$(NuGetBuildDir)/.." />
 	</Target>
 
-	<Target Name="BuildPackage" DependsOnTargets="DownloadNuGet,Clean">
+	<Target Name="BuildPackage" DependsOnTargets="Clean">
 		<PropertyGroup>
 			<NuGetPackageDir>$(MSBuildProjectDirectory)\..\output</NuGetPackageDir>
 			<NuGetRuntimeFolderWin>$(NuGetBuildDir)/runtimes/win/native</NuGetRuntimeFolderWin>
