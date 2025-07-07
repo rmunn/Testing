@@ -47,7 +47,7 @@
 		<Copy SourceFiles="@(TargetFile)" DestinationFolder="$(NuGetBuildDir)\buildMultiTargeting" />
 		<Copy SourceFiles="@(NuSpecFile)" DestinationFolder="$(NuGetBuildDir)" />
 		<Copy SourceFiles="$(RootDir)\README.md" DestinationFolder="$(NuGetDocsFolder)" />
-		<Exec Command="$(NuGetCommand) pack -Version $(PkgVersion) -OutputDirectory $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
+		<Exec Command="$(NuGetCommand) pack -Version $(PkgVersion) -o $(NuGetPackageDir) SIL.Chorus.Mercurial.nuspec"
 			WorkingDirectory="$(NuGetBuildDir)"/>
 	</Target>
 
