@@ -25,7 +25,7 @@
 		<RemoveDir Directories="$(NuGetBuildDir)/.." />
 	</Target>
 
-	<Target Name="BuildPackage" DependsOnTargets="Clean">
+	<Target Name="BuildPackage" DependsOnTargets="DownloadNuGet,Clean">
 		<PropertyGroup>
 			<NuGetPackageDir>$(MSBuildProjectDirectory)\..\output</NuGetPackageDir>
 			<NuGetRuntimeFolderWin>$(NuGetBuildDir)/runtimes/win/native</NuGetRuntimeFolderWin>
