@@ -4,7 +4,7 @@
 		<RootDir Condition="'$(teamcity_version)' != '' And '$(OS)'=='Windows_NT'">$(teamcity_build_checkoutDir)</RootDir>
 		<teamcity_agent_home_dir Condition="'$(teamcity_agent_home_dir)'=='' And '$(OS)'!='Windows_NT'">/var/lib/TeamCity/agent</teamcity_agent_home_dir>
 		<BuildCounter Condition="'$(BuildCounter)' == ''">0</BuildCounter>
-		<NuGetBuildDir>$(MSBuildProjectDirectory)/../output/files</NuGetBuildDir>
+		<NuGetBuildDir>$(MSBuildProjectDirectory)\..\output\files</NuGetBuildDir>
 		<!-- <PreRelease Condition="'$(PreRelease)' == ''">-beta</PreRelease> -->
 		<!-- Version "6.5.2" is really Mercurial 7.0.1 but I'm being cautious -->
 		<PkgVersion Condition="'$(PkgVersion)' == ''">6.5.2.$(BuildCounter)</PkgVersion>
@@ -27,7 +27,7 @@
 
 	<Target Name="BuildPackage" DependsOnTargets="Clean">
 		<PropertyGroup>
-			<NuGetPackageDir>$(MSBuildProjectDirectory)/../output</NuGetPackageDir>
+			<NuGetPackageDir>$(MSBuildProjectDirectory)\..\output</NuGetPackageDir>
 			<NuGetRuntimeFolderWin>$(NuGetBuildDir)/runtimes/win/native</NuGetRuntimeFolderWin>
 			<NuGetRuntimeFolderLinux>$(NuGetBuildDir)/runtimes/linux-x64/native</NuGetRuntimeFolderLinux>
 			<NuGetRuntimeAnyFolder>$(NuGetBuildDir)/runtimes/any</NuGetRuntimeAnyFolder>
