@@ -76,8 +76,8 @@ jobs:
   #         hg/mercurial
   #       if-no-files-found: error
   #
-  build:
-    runs-on: windows-latest
+  combine:
+    runs-on: ubuntu-latest
     # needs: build-python
     steps:
     - name: Checkout
@@ -91,18 +91,58 @@ jobs:
       if: github.event_name == 'push'
       run: echo "releasesuffix=''" >> $GITHUB_ENV
 
-    # - name: Download Mercurial builds
-    #   uses: actions/download-artifact@v4
+    - name: Download Mercurial builds
+      uses: actions/download-artifact@v4
+      with:
+        path: linux-x64/Mercurial
+        pattern: hg-for-python-*
+        merge-multiple: true
+
+    # - name: See if executable bit was preserved
+    #   run: ls -l linux-x64/Mercurial
+    #
+    # - name: Set executable bit on hg and chg binaries again to work around download-artifact bug
+    #   run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
+    #
+    - name: Zip manually to protect executable bit from download-artifact
+      run: 7z a mercurial-files.7z .
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mercurial-files
+        path: mercurial-files.7z
+        if-no-files-found: error
+
+  build:
+    runs-on: windows-latest
+    needs: combine
+    steps:
+    # - name: Checkout
+    #   uses: actions/checkout@v4
     #   with:
-    #     path: linux-x64/Mercurial
-    #     pattern: hg-for-python-*
-    #     merge-multiple: true
+    #     fetch-depth: 0
+    - name: Set Beta Version
+      if: github.event_name != 'push'
+      run: echo "releasesuffix=-beta" >> $GITHUB_ENV
+    - name: Set Release Version
+      if: github.event_name == 'push'
+      run: echo "releasesuffix=''" >> $GITHUB_ENV
+
+    - name: Download Mercurial builds
+      uses: actions/download-artifact@v4
+      with:
+        name: mercurial-files
+        path: mercurial-files.7z
     #
     # - name: See if executable bit was preserved
     #   run: ls -l linux-x64/Mercurial
     #
     # - name: Set executable bit on hg and chg binaries again to work around download-artifact bug
     #   run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
+
+    - name: Unzip
+      run: 7z x mercurial-files.7z
 
     - name: Nuget pack
       run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
