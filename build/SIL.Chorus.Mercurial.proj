@@ -13,9 +13,8 @@
 
 	<Import Project="NuGet.targets"/>
 
-	<Target Name="Build">
+	<Target Name="Build" DependsOnTargets="CheckPrerequisites">
 		<CallTarget Targets="Clean"/>
-		<CallTarget Targets="DownloadNuGet"/>
 		<CallTarget Targets="BuildPackage"/>
 	</Target>
 
