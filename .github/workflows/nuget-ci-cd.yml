@@ -87,10 +87,10 @@ jobs:
         fetch-depth: 0
     - name: Set Beta Version
       if: github.event_name != 'push'
-      run: echo "releasesuffix=-beta" >> $GITHUB_ENV
+      run: echo "PACK_ARGS=--version-suffix=beta.${{github.run_number}}" >> $GITHUB_ENV
     - name: Set Release Version
       if: github.event_name == 'push'
-      run: echo "releasesuffix=''" >> $GITHUB_ENV
+      run: echo "PACK_ARGS=-p:PackageVersion=${{ matrix.mercurial-version }}.${{github.run_number}}" >> $GITHUB_ENV
 
     - name: Download Mercurial builds
       uses: actions/download-artifact@v4
@@ -105,51 +105,20 @@ jobs:
     - name: Set executable bit on hg and chg binaries again to work around download-artifact bug
       run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
 
-    - name: Zip manually to protect executable bit from download-artifact
-      run: 7z a mercurial-files.7z .
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mercurial-files
-        path: mercurial-files.7z
-        if-no-files-found: error
-
-  nuget:
-    runs-on: windows-latest
-    needs: combine
-    steps:
-    - name: Set Beta Version
-      if: github.event_name != 'push'
-      run: echo "releasesuffix=-beta" >> $GITHUB_ENV
-    - name: Set Release Version
-      if: github.event_name == 'push'
-      run: echo "releasesuffix=''" >> $GITHUB_ENV
-
-    - name: Download Mercurial builds
-      uses: actions/download-artifact@v4
-      with:
-        name: mercurial-files
-        path: mercurial-files.7z
-
-    - name: Unzip
-      run: 7z x mercurial-files.7z
-
     - name: Nuget pack
-      run: dotnet build build/SIL.Chorus.Mercurial.proj -property:BuildCounter=${{ github.run_number }}
-      #run: dotnet build build/SIL.Chorus.Mercurial.proj -property:PreRelease="$releasesuffix" -property:BuildCounter=${{ github.run_number }}
+      run: dotnet pack $PACK_ARGS
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: packages
-        path: ./**/*.nupkg
+        path: ./artifacts/package/release/*.nupkg
         if-no-files-found: error
 
     - name: Publish nuget packages
       if: github.event_name == 'push'
       run: |
         dotnet nuget add source --username USERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/rmunn/index.json"
-        dotnet nuget push **/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }}
+        dotnet nuget push artifacts/package/release/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }}
       # TODO: REMOVE "echo" word when bringing back into original project
       # It was:       run: echo nuget push **/*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{ secrets.SILLSDEV_PUBLISH_NUGET_ORG }}

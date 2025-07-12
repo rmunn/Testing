@@ -3,6 +3,8 @@
 		<RuntimesDirectory>$(MSBuildThisFileDirectory)\..\runtimes</RuntimesDirectory>
 		<!-- Allow extraction to a custom location -->
 		<Mercurial4ChorusDestDir Condition="'$(Mercurial4ChorusDestDir)'==''">$(SolutionDir)</Mercurial4ChorusDestDir>
+		<!-- Fall back to project dir if solution dir does not exist (i.e. when building from CLI rather than IDE) -->
+		<Mercurial4ChorusDestDir Condition="'$(Mercurial4ChorusDestDir)'==''">$(MSBuildProjectDirectory)</Mercurial4ChorusDestDir>
 		<!-- Make CopyFiles target actually get executed.-->
 		<BuildDependsOn>$(BuildDependsOn);CopyFiles;AdjustFixUtf8</BuildDependsOn>
 	</PropertyGroup>
