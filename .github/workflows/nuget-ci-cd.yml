@@ -79,7 +79,7 @@ jobs:
           hg/mercurial
         if-no-files-found: error
 
-  combine:
+  build-nuget-package:
     runs-on: ubuntu-latest
     needs: build-python
     steps:
