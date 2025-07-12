@@ -54,6 +54,8 @@ jobs:
     - name: Build Mercurial
       run: make local
       working-directory: hg
+    - name: Record Mercurial version in job output
+      run: echo "hg_version=${{ matrix.mercurial-version }}" >> "$GITHUB_OUTPUT"
     - name: Delete .hg folder prior to upload
       run: rm -rf .hg
       working-directory: hg
@@ -90,7 +92,7 @@ jobs:
       run: echo "PACK_ARGS=--version-suffix=beta.${{github.run_number}}" >> $GITHUB_ENV
     - name: Set Release Version
       if: github.event_name == 'push'
-      run: echo "PACK_ARGS=-p:PackageVersion=${{ matrix.mercurial-version }}.${{github.run_number}}" >> $GITHUB_ENV
+      run: echo "PACK_ARGS=-p:PackageVersion=${{ needs.build-python.outputs.mercurial-version }}.${{github.run_number}}" >> $GITHUB_ENV
 
     - name: Download Mercurial builds
       uses: actions/download-artifact@v4
