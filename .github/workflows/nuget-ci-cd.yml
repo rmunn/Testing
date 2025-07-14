@@ -92,10 +92,14 @@ jobs:
         fetch-depth: 0
     - name: Set Beta Version
       if: github.event_name != 'push'
-      run: echo "PACK_ARGS=--version-suffix=beta.${{github.run_number}}" >> $GITHUB_ENV
+      run: echo "RELEASE_SUFFIX=-beta." >> $GITHUB_ENV
     - name: Set Release Version
       if: github.event_name == 'push'
-      run: echo "PACK_ARGS=-p:PackageVersion=${{ needs.build-python.outputs.mercurial-version }}.${{github.run_number}}" >> $GITHUB_ENV
+      run: echo "RELEASE_SUFFIX=." >> $GITHUB_ENV
+    - name: Set Package Version
+      run: |
+        echo "PackageVersion=${{ needs.build-python.outputs.mercurial-version }}${RELEASE_SUFFIX}${{github.run_number}}"
+        echo "PackageVersion=${{ needs.build-python.outputs.mercurial-version }}${RELEASE_SUFFIX}${{github.run_number}}" >> $GITHUB_ENV
 
     - name: Download Mercurial builds
       uses: actions/download-artifact@v4
@@ -111,7 +115,7 @@ jobs:
       run: chmod +x linux-x64/Mercurial/hg linux-x64/Mercurial/chg
 
     - name: Nuget pack
-      run: dotnet pack $PACK_ARGS
+      run: dotnet pack -p:PackageVersion=$PackageVersion
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4

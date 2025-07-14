@@ -9,8 +9,6 @@
   <!-- NuGet properties -->
   <PropertyGroup>
     <PackageId>SIL.Chorus.Mercurial</PackageId>
-    <!-- TODO: Assign VersionPrefix here, let VersionSuffix be set in build -->
-    <VersionPrefix>3.4.5</VersionPrefix> <!-- Will be 7.0.1 in final version of packaging setup -->
     <Authors>SIL International</Authors>
 		<Copyright>Copyright (c) 2020-2022 SIL International</Copyright>
     <PackageLicenseExpression>GPL-2.0-or-later</PackageLicenseExpression>
