@@ -3,7 +3,13 @@
   <!-- MSBuild properties -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-		<RootDir Condition="'$(teamcity_version)' == '' Or '$(OS)'!='Windows_NT'">$(MSBuildProjectDirectory)</RootDir>
+    <RootDir Condition="'$(teamcity_version)' == '' Or '$(OS)'!='Windows_NT'">$(MSBuildProjectDirectory)</RootDir>
+    <RootDir Condition="'$(teamcity_version)' != '' And '$(OS)'=='Windows_NT'">$(teamcity_build_checkoutDir)</RootDir>
+    <teamcity_agent_home_dir Condition="'$(teamcity_agent_home_dir)'=='' And '$(OS)'!='Windows_NT'">/var/lib/TeamCity/agent</teamcity_agent_home_dir>
+    <BuildCounter Condition="'$(BuildCounter)' == ''">0</BuildCounter>
+    <PreRelease Condition="'$(PreRelease)' == ''">-beta.</PreRelease>
+    <MercurialVersion Condition="'$(MercurialVersion)' == ''">7.0.1</MercurialVersion>
+    <PackageVersion Condition="'$(PackageVersion)' == ''">$(MercurialVersion)$(PreRelease)$(BuildCounter)</PackageVersion>
   </PropertyGroup>
 
   <!-- NuGet properties -->
@@ -25,17 +31,19 @@ v3.0.3: Allow specifying an alternate destination directory using `Mercurial4Cho
 
 v6.5.1: Upgrade to Mercurial 6.5.1
 
-v7.0.1: Upgrade to Mercurial 7.0.1
+v7.0.1: Upgrade to Mercurial 7.0.1 and remove requirement to depend directly on this package (just depend on Chorus or LibChorus)
     </PackageReleaseNotes>
     <PackageReadme>docs\README.md</PackageReadme>
   </PropertyGroup>
 
   <!-- What to pack -->
   <ItemGroup>
+    <ReadmeFile Include="$(RootDir)\README.md" />
     <LinuxArtifacts Include="$(RootDir)\linux-x64\**\*.*" />
     <WinArtifacts Include="$(RootDir)\win\**\*.*" />
     <Extensions Include="$(RootDir)\MercurialExtensions\**\*.*" />
-    <NuSpecFile Include="$(RootDir)\assets\*.nuspec" />
+    <!-- Not needed when `dotnet pack` is running the show: -->
+    <!-- <NuSpecFile Include="$(RootDir)\assets\*.nuspec" /> -->
     <TargetFile Include="$(RootDir)\assets\*.targets" />
   </ItemGroup>
 
@@ -47,6 +55,9 @@ v7.0.1: Upgrade to Mercurial 7.0.1
 
   <!-- Where to put things -->
   <ItemGroup>
+    <Content Include="@(ReadmeFile)">
+      <PackagePath>docs\</PackagePath>
+    </Content>
     <Content Include="@(LinuxArtifacts)">
       <PackagePath>linux-x64\</PackagePath>
     </Content>
@@ -60,11 +71,9 @@ v7.0.1: Upgrade to Mercurial 7.0.1
     <Content Include="@(TargetFile)">
       <PackagePath>build\;buildMultiTargeting\;buildTransitive\</PackagePath>
     </Content>
+    <!-- Not needed when `dotnet pack` is running the show: -->
+    <!-- <Content Include="@(NuSpecFile)">
+      <PackagePath>\</PackagePath>
+    </Content> -->
   </ItemGroup>
-
-  <!-- Not yet implemented in the above list: -->
-  <!-- <Copy SourceFiles="@(NuSpecFile)" DestinationFolder="$(NuGetBuildDir)" /> -->
-  <!-- <Copy SourceFiles="$(RootDir)\README.md" DestinationFolder="$(NuGetDocsFolder)" /> -->
-
-  <!-- TODO: Test the results of packing this stuff -->
 </Project>
